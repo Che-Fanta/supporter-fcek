@@ -232,7 +232,7 @@
     setTimeout(function() { el.className = 'msg'; }, 3000);
   }
 
-  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function esc(s) { var t = (s === null || s === undefined) ? '' : String(s); return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function formatDate(d) { if (!d) return ''; var dt = new Date(d); return isNaN(dt) ? '' : dt.toLocaleDateString('de-CH'); }
 
   loadMembers();
