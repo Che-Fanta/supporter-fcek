@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FC Ebnat-Kappel — Event-Anmeldung</title>
+<style>
+  :root { --fcek-blue: #021639; --fcek-blue-light: #0a2a5e; --success: #1c7c3f; --error: #c0392b; --border: #d7dbe2; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 0; color: #1a1a1a; }
+  .header { background: var(--fcek-blue); color: #fff; padding: 28px 20px 22px; text-align: center; }
+  .header h1 { margin: 0 0 4px; font-size: 1.4rem; font-weight: 700; }
+  .header p { margin: 0; font-size: 0.9rem; opacity: 0.85; }
+  .wrap { max-width: 480px; margin: -18px auto 40px; padding: 0 16px; }
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); padding: 24px 20px 28px; }
+  .event-name { font-weight: 700; color: var(--fcek-blue); font-size: 1.05rem; margin-bottom: 18px; text-align: center; }
+  label { display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }
+  input[type="text"] { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; }
+  input[type="text"]:focus { outline: none; border-color: var(--fcek-blue); }
+  .meal-options { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .meal-option { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .meal-option:hover { border-color: var(--fcek-blue-light); }
+  .meal-option input[type="radio"] { width: 18px; height: 18px; accent-color: var(--fcek-blue); flex-shrink: 0; }
+  .meal-option.selected { border-color: var(--fcek-blue); background: #eef1f7; }
+  .meal-option span { font-size: 0.95rem; }
+  button { width: 100%; margin-top: 24px; padding: 13px; background: var(--fcek-blue); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  button:hover:not(:disabled) { background: var(--fcek-blue-light); }
+  .msg { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 0.9rem; display: none; }
+  .msg.error { background: #fdecea; color: var(--error); display: block; }
+  .success-screen { text-align: center; padding: 20px 0; }
+  .success-screen .icon { font-size: 2.5rem; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>FC Ebnat-Kappel</h1>
+    <p>Anmeldung Event</p>
+  </div>
+  <div class="wrap">
+    <div class="card" id="formCard">
+      <div class="event-name" id="eventName">Vereinsanlass</div>
+      <form id="eventForm">
+        <label for="vorname">Vorname</label>
+        <input type="text" id="vorname" required autocomplete="given-name">
+        <label for="nachname">Nachname</label>
+        <input type="text" id="nachname" required autocomplete="family-name">
+        <label>Essenswahl</label>
+        <div class="meal-options">
+          <label class="meal-option">
+            <input type="radio" name="essen" value="Fitness-Teller, 1 Schnitzel" required>
+            <span>Fitness-Teller — 1 Schnitzel</span>
+          </label>
+          <label class="meal-option">
+            <input type="radio" name="essen" value="Fitness-Teller, 2 Schnitzel">
+            <span>Fitness-Teller — 2 Schnitzel</span>
+          </label>
+          <label class="meal-option">
+            <input type="radio" name="essen" value="Pommes, 1 Schnitzel">
+            <span>Pommes — 1 Schnitzel</span>
+          </label>
+          <label class="meal-option">
+            <input type="radio" name="essen" value="Pommes, 2 Schnitzel">
+            <span>Pommes — 2 Schnitzel</span>
+          </label>
+        </div>
+        <button type="submit" id="submitBtn">Anmelden</button>
+        <div class="msg" id="msg"></div>
+      </form>
+      <div class="success-screen" id="successScreen" style="display:none;">
+        <div class="icon">✅</div>
+        <p><strong>Danke für deine Anmeldung!</strong></p>
+        <p id="successDetail" style="color:#555; font-size:0.9rem;"></p>
+      </div>
+    </div>
+  </div>
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSbHjNjPHhpVuJ-pdd9T2ql7B-6iNrQCQxmZOiY1i9zwxHHQz64zMxzJJHN-6FU0gSug/exec";
+    const EVENT_NAME = "Vereinsanlass";
+
+    document.getElementById('eventName').textContent = EVENT_NAME;
+
+    document.querySelectorAll('.meal-option').forEach(function(opt) {
+      opt.addEventListener('click', function() {
+        document.querySelectorAll('.meal-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+      });
+    });
+
+    document.getElementById('eventForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var msg = document.getElementById('msg');
+      msg.style.display = 'none';
+      msg.className = 'msg';
+
+      var vorname = document.getElementById('vorname').value.trim();
+      var nachname = document.getElementById('nachname').value.trim();
+      var essenRadio = document.querySelector('input[name="essen"]:checked');
+
+      if (!vorname || !nachname) { showError('Bitte Vor- und Nachname ausfüllen.'); return; }
+      if (!essenRadio) { showError('Bitte eine Essenswahl auswählen.'); return; }
+
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Wird gesendet…';
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ formType: 'event', eventName: EVENT_NAME, vorname: vorname, nachname: nachname, essen: essenRadio.value })
+      })
+      .then(function() {
+        document.getElementById('eventForm').style.display = 'none';
+        document.getElementById('successScreen').style.display = 'block';
+        document.getElementById('successDetail').textContent = vorname + ' ' + nachname + ' — ' + essenRadio.value;
+      })
+      .catch(function() {
+        showError('Verbindungsfehler. Bitte nochmals versuchen.');
+        btn.disabled = false;
+        btn.textContent = 'Anmelden';
+      });
+    });
+
+    function showError(text) {
+      var msg = document.getElementById('msg');
+      msg.textContent = text;
+      msg.className = 'msg error';
+      msg.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
