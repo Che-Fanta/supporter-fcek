@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FC Ebnat-Kappel — Vorstand</title>
+<style>
+  :root { --fcek-blue: #021639; --fcek-blue-light: #0a2a5e; --border: #d7dbe2; --success: #1c7c3f; --error: #c0392b; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f5f7; margin: 0; color: #1a1a1a; }
+  .topbar { background: var(--fcek-blue); color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .topbar h1 { margin: 0; font-size: 1.1rem; }
+  .topbar .sub { font-size: 0.8rem; opacity: 0.75; }
+  .wrap { max-width: 1000px; margin: 20px auto; padding: 0 14px 40px; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  .stat { background: #fff; border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 130px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
+  .stat .val { font-size: 1.8rem; font-weight: 700; color: var(--fcek-blue); }
+  .stat .lbl { font-size: 0.8rem; color: #666; margin-top: 2px; }
+  .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); padding: 18px; margin-bottom: 18px; }
+  .card h2 { margin: 0 0 14px; font-size: 1rem; color: var(--fcek-blue); }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  input[type="text"], select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.9rem; }
+  input[type="text"]:focus, select:focus { outline: none; border-color: var(--fcek-blue); }
+  .btn { padding: 8px 14px; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+  .btn-primary { background: var(--fcek-blue); color: #fff; }
+  .btn-primary:hover { background: var(--fcek-blue-light); }
+  .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
+  .btn-outline { background: #fff; border: 1px solid var(--border); color: #333; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th { background: #f0f2f5; padding: 9px 10px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:hover td { background: #f9fafc; }
+  select.inline { padding: 4px 6px; font-size: 0.82rem; border-radius: 5px; border: 1px solid var(--border); }
+  .loading { text-align: center; padding: 30px; color: #888; }
+  .msg { padding: 10px 14px; border-radius: 7px; font-size: 0.88rem; margin-bottom: 12px; display: none; }
+  .msg.ok { background: #d1e7dd; color: var(--success); display: block; }
+  .msg.err { background: #f8d7da; color: var(--error); display: block; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: #fff; border-radius: 12px; padding: 24px; width: 95%; max-width: 440px; }
+  .modal h3 { margin: 0 0 16px; color: var(--fcek-blue); }
+  .modal label { display: block; font-size: 0.88rem; font-weight: 600; margin: 10px 0 4px; }
+  .modal input, .modal select { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.9rem; }
+  .modal-footer { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-footer button { flex: 1; }
+  @media(max-width:600px) { table { font-size: 0.78rem; } th, td { padding: 7px 6px; } }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div>
+    <h1>FC Ebnat-Kappel — Vorstand</h1>
+    <div class="sub">Supporter-Verwaltung</div>
+  </div>
+  <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
+</div>
+
+<div class="wrap">
+  <div class="msg" id="globalMsg"></div>
+  <div class="stats">
+    <div class="stat"><div class="val" id="statTotal">–</div><div class="lbl">Mitglieder total</div></div>
+    <div class="stat"><div class="val" id="statAktiv">–</div><div class="lbl">Aktiv</div></div>
+    <div class="stat"><div class="val" id="statBezahlt">–</div><div class="lbl">Beitrag bezahlt</div></div>
+    <div class="stat"><div class="val" id="statPaar">–</div><div class="lbl">Paarmitgliedschaften</div></div>
+  </div>
+  <div class="card">
+    <h2>Mitgliederliste</h2>
+    <div class="toolbar">
+      <input type="text" id="search" placeholder="Suchen…" oninput="renderTable()" style="flex:1;min-width:180px">
+      <select id="filterStatus" onchange="renderTable()">
+        <option value="">Alle Status</option>
+        <option>Neu</option><option>Aktiv</option><option>Inaktiv</option>
+      </select>
+      <select id="filterBezahlt" onchange="renderTable()">
+        <option value="">Beitrag alle</option>
+        <option value="Ja">Bezahlt</option><option value="Nein">Nicht bezahlt</option>
+      </select>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
+    </div>
+    <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <h3>Mitglied erfassen</h3>
+    <label>Typ</label>
+    <select id="mTyp" onchange="togglePaar2()"><option>Einzel</option><option>Paar</option></select>
+    <label>Vorname 1</label><input type="text" id="mVn1">
+    <label>Nachname 1</label><input type="text" id="mNn1">
+    <label>E-Mail</label><input type="text" id="mEmail">
+    <div id="mPaarDiv" style="display:none">
+      <label>Vorname 2</label><input type="text" id="mVn2">
+      <label>Nachname 2</label><input type="text" id="mNn2">
+    </div>
+    <label>Status</label>
+    <select id="mStatus"><option>Neu</option><option>Aktiv</option><option>Inaktiv</option></select>
+    <label>Beitrag bezahlt</label>
+    <select id="mBez"><option>Nein</option><option>Ja</option></select>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveMember()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSbHjNjPHhpVuJ-pdd9T2ql7B-6iNrQCQxmZOiY1i9zwxHHQz64zMxzJJHN-6FU0gSug/exec";
+  var allMembers = [];
+
+  function loadMembers() {
+    fetch(SCRIPT_URL + '?page=data')
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        allMembers = result.data || [];
+        updateStats();
+        renderTable();
+      })
+      .catch(function(err) {
+        document.getElementById('tableWrap').innerHTML = '<p style="color:red">Fehler beim Laden: ' + err.message + '</p>';
+      });
+  }
+
+  function updateStats() {
+    document.getElementById('statTotal').textContent = allMembers.length;
+    document.getElementById('statAktiv').textContent = allMembers.filter(function(m) { return m.status === 'Aktiv'; }).length;
+    document.getElementById('statBezahlt').textContent = allMembers.filter(function(m) { return m.beitragBezahlt === 'Ja'; }).length;
+    document.getElementById('statPaar').textContent = allMembers.filter(function(m) { return m.typ === 'Paar'; }).length;
+  }
+
+  function renderTable() {
+    var q = document.getElementById('search').value.toLowerCase();
+    var fs = document.getElementById('filterStatus').value;
+    var fb = document.getElementById('filterBezahlt').value;
+
+    var filtered = allMembers.filter(function(m) {
+      var text = [m.vorname1, m.nachname1, m.vorname2, m.nachname2, m.email].join(' ').toLowerCase();
+      return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb);
+    });
+
+    if (!filtered.length) {
+      document.getElementById('tableWrap').innerHTML = '<p style="color:#888;padding:16px">Keine Einträge gefunden.</p>';
+      return;
+    }
+
+    var rows = filtered.map(function(m) {
+      return '<tr>' +
+        '<td>' + esc(m.vorname1) + ' ' + esc(m.nachname1) + (m.vorname2 ? '<br><small style="color:#888">' + esc(m.vorname2) + ' ' + esc(m.nachname2) + '</small>' : '') + '</td>' +
+        '<td>' + esc(m.typ) + '</td>' +
+        '<td>' + esc(m.email) + '</td>' +
+        '<td><select class="inline" onchange="updateField(' + m.rowIndex + ',\'status\',this.value)">' +
+          ['Neu','Aktiv','Inaktiv'].map(function(s) { return '<option' + (m.status===s?' selected':'') + '>' + s + '</option>'; }).join('') +
+        '</select></td>' +
+        '<td><select class="inline" onchange="updateField(' + m.rowIndex + ',\'beitragBezahlt\',this.value)">' +
+          ['Nein','Ja'].map(function(s) { return '<option' + (m.beitragBezahlt===s?' selected':'') + '>' + s + '</option>'; }).join('') +
+        '</select></td>' +
+        '<td style="color:#aaa;font-size:0.78rem">' + formatDate(m.timestamp) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    document.getElementById('tableWrap').innerHTML =
+      '<table><thead><tr><th>Name</th><th>Typ</th><th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Anmeldung</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function updateField(rowIndex, field, value) {
+    var payload = { formType: 'update', rowIndex: rowIndex, field: field, value: value };
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(function() {
+      var m = allMembers.find(function(x) { return x.rowIndex === rowIndex; });
+      if (m) m[field] = value;
+      updateStats();
+      showMsg('Gespeichert.', 'ok');
+    });
+  }
+
+  function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+  function closeModal() { document.getElementById('addModal').classList.remove('open'); }
+  function togglePaar2() {
+    document.getElementById('mPaarDiv').style.display = document.getElementById('mTyp').value === 'Paar' ? 'block' : 'none';
+  }
+
+  function saveMember() {
+    var data = {
+      formType: 'addMember',
+      typ: document.getElementById('mTyp').value,
+      vorname1: document.getElementById('mVn1').value.trim(),
+      nachname1: document.getElementById('mNn1').value.trim(),
+      email: document.getElementById('mEmail').value.trim(),
+      vorname2: document.getElementById('mVn2').value.trim(),
+      nachname2: document.getElementById('mNn2').value.trim(),
+      status: document.getElementById('mStatus').value,
+      beitragBezahlt: document.getElementById('mBez').value
+    };
+    if (!data.vorname1 || !data.nachname1) { alert('Bitte mind. Vorname und Nachname ausfüllen.'); return; }
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    }).then(function() {
+      closeModal();
+      setTimeout(loadMembers, 1000);
+      showMsg('Mitglied erfasst.', 'ok');
+    });
+  }
+
+  function exportCsv() {
+    var rows = [['Timestamp','Typ','Vorname1','Nachname1','Vorname2','Nachname2','Email','Status','Beitrag bezahlt']];
+    allMembers.forEach(function(m) {
+      rows.push([m.timestamp, m.typ, m.vorname1, m.nachname1, m.vorname2||'', m.nachname2||'', m.email, m.status, m.beitragBezahlt]);
+    });
+    var csv = rows.map(function(r) {
+      return r.map(function(c) {
+        var s = (c||'').toString();
+        return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s;
+      }).join(',');
+    }).join('\n');
+    var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'mitglieder.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function showMsg(text, type) {
+    var el = document.getElementById('globalMsg');
+    el.textContent = text;
+    el.className = 'msg ' + type;
+    setTimeout(function() { el.className = 'msg'; }, 3000);
+  }
+
+  function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function formatDate(d) { if (!d) return ''; var dt = new Date(d); return isNaN(dt) ? '' : dt.toLocaleDateString('de-CH'); }
+
+  loadMembers();
+</script>
+</body>
+</html>
