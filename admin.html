@@ -142,7 +142,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzr-KNZqp6CAxVtk0rJH34_cOL78rmxAN9v64UkaYaAFcVuGYxXKkSWLIP7ejgx6DWqyA/exec";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAIyF7tsysJsWjAYyHR6Qu5cafx0ujdq9w_eH6iOEtcslAzKBHy1TCmBycTpEyr-0Gkw/exec";
 
   // WICHTIG: muss exakt der Client-ID aus der Google Cloud Console entsprechen
   // und mit OAUTH_CLIENT_ID in Code.gs übereinstimmen.
@@ -153,7 +153,26 @@
   var userEmail = null;
 
   // ---------- Google Sign-In ----------
-  window.onload = function() {
+  // Wartet, bis das Google-Skript (accounts.google.com/gsi/client) wirklich
+  // fertig geladen ist, bevor initialize() aufgerufen wird. Ohne das kann es
+  // je nach Ladereihenfolge/Netzwerk-Timing passieren, dass initialize()
+  // zu früh läuft und der Button dann nie erscheint (GSI_LOGGER-Fehler
+  // "Failed to render button before calling initialize()").
+  function waitForGoogleAndInit(retriesLeft) {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      initGoogleSignIn();
+      return;
+    }
+    if (retriesLeft <= 0) {
+      document.getElementById('loginMsg').textContent =
+        'Google-Login konnte nicht geladen werden. Seite neu laden oder Browser-Erweiterungen (Adblocker) prüfen.';
+      document.getElementById('loginMsg').className = 'msg err';
+      return;
+    }
+    setTimeout(function() { waitForGoogleAndInit(retriesLeft - 1); }, 200);
+  }
+
+  function initGoogleSignIn() {
     google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
       callback: handleGoogleLogin
@@ -164,6 +183,10 @@
     );
     // Falls schon eingeloggt (Session), automatisch versuchen
     google.accounts.id.prompt();
+  }
+
+  window.onload = function() {
+    waitForGoogleAndInit(25); // max. ~5 Sekunden warten (25 x 200ms)
   };
 
   function handleGoogleLogin(response) {
