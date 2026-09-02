@@ -266,3 +266,170 @@
         textCell(m.rowIndex, 'typ', m.typ, true) +
         textCell(m.rowIndex, 'vorname1', m.vorname1) +
         textCell(m.rowIndex, 'nachname1', m.nachname1) +
+        textCell(m.rowIndex, 'vorname2', m.vorname2) +
+        textCell(m.rowIndex, 'nachname2', m.nachname2) +
+        textCell(m.rowIndex, 'email', m.email, false, 'col-email') +
+        statusCell(m.rowIndex, m.status) +
+        selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja']) +
+        textCell(m.rowIndex, 'eintritt', m.eintritt, false, 'col-eintritt') +
+        monthCell(m.rowIndex, 'austritt', m.austritt, m.status !== 'Inaktiv') +
+        '</tr>';
+    }).join('');
+
+    document.getElementById('tableWrap').innerHTML =
+      '<table><thead><tr>' +
+      '<th>Typ</th><th>Vorname 1</th><th>Nachname 1</th><th>Vorname 2</th><th>Nachname 2</th>' +
+      '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  // Austritt: type="month" erzwingt im Browser automatisch nur Monat+Jahr (YYYY-MM), kein Tag.
+  function monthCell(rowIndex, field, value, disabled) {
+    var v = (value === null || value === undefined) ? '' : value;
+    return '<td class="col-eintritt"><input type="month" id="austritt-' + rowIndex + '" class="cell-input" value="' + escAttr(v) +
+      '"' + (disabled ? ' disabled title="Nur editierbar wenn Status = Inaktiv"' : '') +
+      ' onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
+  }
+
+  function textCell(rowIndex, field, value, isTyp, extraClass) {
+    if (isTyp) return selectCell(rowIndex, field, value, ['Einzel','Paar']);
+    var v = (value === null || value === undefined) ? '' : value;
+    return '<td class="' + (extraClass||'') + '"><input type="text" class="cell-input" value="' + escAttr(v) +
+      '" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
+  }
+
+  function selectCell(rowIndex, field, value, options) {
+    var opts = options.map(function(o) {
+      return '<option' + (value === o ? ' selected' : '') + '>' + o + '</option>';
+    }).join('');
+    return '<td><select class="cell-input" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)">' + opts + '</select></td>';
+  }
+
+  // Status-Dropdown: Austritt-Feld wird nur freigeschaltet, wenn Status = Inaktiv.
+  function statusCell(rowIndex, value) {
+    var options = ['Neu','Aktiv','Inaktiv'];
+    var opts = options.map(function(o) {
+      return '<option' + (value === o ? ' selected' : '') + '>' + o + '</option>';
+    }).join('');
+    return '<td><select class="cell-input" onchange="onStatusChange(this,' + rowIndex + ')">' + opts + '</select></td>';
+  }
+
+  function onStatusChange(selectEl, rowIndex) {
+    var newVal = selectEl.value;
+    var austrittInput = document.getElementById('austritt-' + rowIndex);
+
+    if (austrittInput) {
+      if (newVal === 'Inaktiv') {
+        austrittInput.disabled = false;
+        austrittInput.title = '';
+        austrittInput.focus();
+      } else {
+        austrittInput.disabled = true;
+        austrittInput.title = 'Nur editierbar wenn Status = Inaktiv';
+      }
+    }
+
+    updateField(rowIndex, 'status', newVal);
+  }
+
+  // ---------- Schreibende Aktionen (alle mit idToken) ----------
+  function updateField(rowIndex, field, value) {
+    var payload = { formType: 'update', rowIndex: rowIndex, field: field, value: value, idToken: idToken };
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') {
+          showMsg(result.message || 'Fehler beim Speichern.', 'err');
+          return;
+        }
+        var m = allMembers.find(function(x) { return x.rowIndex === rowIndex; });
+        if (m) m[field] = value;
+        updateStats();
+        showMsg('Gespeichert.', 'ok');
+      })
+      .catch(function(err) { showMsg('Fehler beim Speichern: ' + err.message, 'err'); });
+  }
+
+  function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+  function closeModal() { document.getElementById('addModal').classList.remove('open'); }
+  function togglePaar2() {
+    document.getElementById('mPaarDiv').style.display = document.getElementById('mTyp').value === 'Paar' ? 'block' : 'none';
+  }
+
+  function toggleAustritt() {
+    var isInaktiv = document.getElementById('mStatus').value === 'Inaktiv';
+    var el = document.getElementById('mAustritt');
+    el.disabled = !isInaktiv;
+    el.title = isInaktiv ? '' : 'Nur editierbar wenn Status = Inaktiv';
+    if (!isInaktiv) el.value = '';
+  }
+
+  function saveMember() {
+    var data = {
+      formType: 'addMember',
+      idToken: idToken,
+      typ: document.getElementById('mTyp').value,
+      vorname1: document.getElementById('mVn1').value.trim(),
+      nachname1: document.getElementById('mNn1').value.trim(),
+      email: document.getElementById('mEmail').value.trim(),
+      vorname2: document.getElementById('mVn2').value.trim(),
+      nachname2: document.getElementById('mNn2').value.trim(),
+      status: document.getElementById('mStatus').value,
+      beitragBezahlt: document.getElementById('mBez').value,
+      eintritt: document.getElementById('mEintritt').value.trim(),
+      austritt: document.getElementById('mAustritt').value.trim()
+    };
+    if (!data.vorname1 || !data.nachname1) { alert('Bitte mind. Vorname und Nachname ausfüllen.'); return; }
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') {
+          showMsg(result.message || 'Fehler beim Erfassen.', 'err');
+          return;
+        }
+        closeModal();
+        setTimeout(loadMembers, 800);
+        showMsg('Mitglied erfasst.', 'ok');
+      })
+      .catch(function(err) { showMsg('Fehler: ' + err.message, 'err'); });
+  }
+
+  function exportCsv() {
+    var rows = [['Typ','Vorname1','Nachname1','Vorname2','Nachname2','Email','Status','Beitrag bezahlt','Eintritt','Austritt']];
+    allMembers.forEach(function(m) {
+      rows.push([m.typ, m.vorname1, m.nachname1, m.vorname2||'', m.nachname2||'', m.email, m.status, m.beitragBezahlt, m.eintritt||'', m.austritt||'']);
+    });
+    var csv = rows.map(function(r) {
+      return r.map(function(c) {
+        var s = (c||'').toString();
+        return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s;
+      }).join(',');
+    }).join('\n');
+    var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'mitglieder.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function showMsg(text, type) {
+    var el = document.getElementById('globalMsg');
+    el.textContent = text;
+    el.className = 'msg ' + type;
+    setTimeout(function() { el.className = 'msg'; }, 3000);
+  }
+
+  function escAttr(s) {
+    var t = (s === null || s === undefined) ? '' : String(s);
+    return t.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
+</body>
+</html>
