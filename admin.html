@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FC Ebnat-Kappel — Vorstand</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root { --fcek-blue: #021639; --fcek-blue-light: #0a2a5e; --border: #d7dbe2; --success: #1c7c3f; --error: #c0392b; }
   * { box-sizing: border-box; }
@@ -13,7 +12,6 @@
   .topbar h1 { margin: 0; font-size: 1.1rem; }
   .topbar .sub { font-size: 0.8rem; opacity: 0.75; }
   .topbar-right { display: flex; align-items: center; gap: 12px; }
-  .who { font-size: 0.8rem; opacity: 0.85; }
   .wrap { max-width: 1300px; margin: 20px auto; padding: 0 14px 40px; }
   .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
   .stat { background: #fff; border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 130px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
@@ -22,8 +20,8 @@
   .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); padding: 18px; margin-bottom: 18px; overflow-x: auto; }
   .card h2 { margin: 0 0 14px; font-size: 1rem; color: var(--fcek-blue); }
   .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-  input[type="text"], select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.9rem; }
-  input[type="text"]:focus, select:focus { outline: none; border-color: var(--fcek-blue); }
+  input[type="text"], input[type="password"], select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.9rem; }
+  input:focus, select:focus { outline: none; border-color: var(--fcek-blue); }
   .btn { padding: 8px 14px; border: none; border-radius: 7px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
   .btn-primary { background: var(--fcek-blue); color: #fff; }
   .btn-primary:hover { background: var(--fcek-blue-light); }
@@ -52,10 +50,13 @@
   .modal-footer { display: flex; gap: 10px; margin-top: 18px; }
   .modal-footer button { flex: 1; }
 
-  /* Login-Gate */
+  /* Login-Gate (Passwort) */
   #loginGate { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; text-align: center; padding: 20px; }
   #loginGate h2 { color: var(--fcek-blue); margin-bottom: 0; }
   #loginGate p { color: #666; max-width: 360px; margin-top: 0; }
+  #loginForm { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 280px; }
+  #loginForm input[type="password"] { width: 100%; padding: 11px 12px; font-size: 1rem; text-align: center; }
+  #loginForm button { padding: 11px; }
   #app { display: none; }
 
   @media(max-width:600px) { table { font-size: 0.78rem; } th, td { padding: 6px 4px; } }
@@ -63,15 +64,18 @@
 </head>
 <body>
 
-<!-- LOGIN-GATE: sichtbar bis erfolgreicher Google-Login + Admin-Check -->
+<!-- LOGIN-GATE: sichtbar bis korrektes Passwort eingegeben wurde -->
 <div id="loginGate">
   <h2>FC Ebnat-Kappel — Vorstand</h2>
-  <p>Bitte mit deinem Google-Konto anmelden. Zugriff nur für hinterlegte Vorstandsmitglieder.</p>
-  <div id="googleBtn"></div>
+  <p>Bitte Passwort eingeben. Zugriff nur für den Vorstand.</p>
+  <form id="loginForm">
+    <input type="password" id="pwInput" placeholder="Passwort" autofocus>
+    <button type="submit" class="btn btn-primary">Anmelden</button>
+  </form>
   <div class="msg err" id="loginMsg" style="max-width:360px"></div>
 </div>
 
-<!-- APP: erst sichtbar nach erfolgreichem Login -->
+<!-- APP: erst sichtbar nach korrektem Passwort -->
 <div id="app">
   <div class="topbar">
     <div>
@@ -79,7 +83,6 @@
       <div class="sub">Supporter-Verwaltung</div>
     </div>
     <div class="topbar-right">
-      <span class="who" id="whoAmI"></span>
       <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
       <button class="btn btn-outline btn-sm" onclick="logout()">Abmelden</button>
     </div>
@@ -142,74 +145,32 @@
 </div>
 
 <script>
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAIyF7tsysJsWjAYyHR6Qu5cafx0ujdq9w_eH6iOEtcslAzKBHy1TCmBycTpEyr-0Gkw/exec";
-
-  // WICHTIG: muss exakt der Client-ID aus der Google Cloud Console entsprechen
-  // und mit OAUTH_CLIENT_ID in Code.gs übereinstimmen.
-  const GOOGLE_CLIENT_ID = "715534929141-kg103hsdncrfp43hms9sescn5d2ung40.apps.googleusercontent.com";
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz83enDvL_K8ES5yWBz2Gzyi1n8jYqfGUAsLft9mva-rGLTmbA1Mb2gy-8HhvsXIPe1kw/exec";
 
   var allMembers = [];
-  var idToken = null;
-  var userEmail = null;
+  var adminPassword = null;
 
-  // ---------- Google Sign-In ----------
-  // Wartet, bis das Google-Skript (accounts.google.com/gsi/client) wirklich
-  // fertig geladen ist, bevor initialize() aufgerufen wird.
-  function waitForGoogleAndInit(retriesLeft) {
-    if (window.google && window.google.accounts && window.google.accounts.id) {
-      initGoogleSignIn();
-      return;
-    }
-    if (retriesLeft <= 0) {
-      document.getElementById('loginMsg').textContent =
-        'Google-Login konnte nicht geladen werden. Seite neu laden oder Browser-Erweiterungen (Adblocker) prüfen.';
-      document.getElementById('loginMsg').className = 'msg err';
-      return;
-    }
-    setTimeout(function() { waitForGoogleAndInit(retriesLeft - 1); }, 200);
-  }
-
-  function initGoogleSignIn() {
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: handleGoogleLogin
-    });
-    google.accounts.id.renderButton(
-      document.getElementById('googleBtn'),
-      { theme: 'filled_blue', size: 'large', text: 'signin_with' }
-    );
-    google.accounts.id.prompt();
-  }
-
-  window.onload = function() {
-    waitForGoogleAndInit(25);
-  };
-
-  function handleGoogleLogin(response) {
-    idToken = response.credential;
-    try {
-      var payload = JSON.parse(atob(idToken.split('.')[1]));
-      userEmail = payload.email;
-    } catch (e) {}
-
+  // ---------- Passwort-Login ----------
+  document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    adminPassword = document.getElementById('pwInput').value;
     verifyAndEnter();
-  }
+  });
 
   function verifyAndEnter() {
     document.getElementById('loginMsg').className = 'msg';
-    fetch(SCRIPT_URL + '?page=data&idToken=' + encodeURIComponent(idToken))
+    fetch(SCRIPT_URL + '?page=data&password=' + encodeURIComponent(adminPassword))
       .then(function(res) { return res.json(); })
       .then(function(result) {
         if (result.status !== 'success') {
           document.getElementById('loginMsg').textContent = result.message || 'Zugriff verweigert.';
           document.getElementById('loginMsg').className = 'msg err';
-          idToken = null;
+          adminPassword = null;
           return;
         }
         allMembers = result.data || [];
         document.getElementById('loginGate').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        document.getElementById('whoAmI').textContent = userEmail || '';
         updateStats();
         renderTable();
       })
@@ -220,11 +181,10 @@
   }
 
   function logout() {
-    idToken = null;
-    userEmail = null;
+    adminPassword = null;
+    document.getElementById('pwInput').value = '';
     document.getElementById('app').style.display = 'none';
     document.getElementById('loginGate').style.display = 'flex';
-    google.accounts.id.disableAutoSelect();
   }
 
   function loadMembers() { verifyAndEnter(); }
@@ -325,9 +285,9 @@
     updateField(rowIndex, 'status', newVal);
   }
 
-  // ---------- Schreibende Aktionen (alle mit idToken) ----------
+  // ---------- Schreibende Aktionen (alle mit password) ----------
   function updateField(rowIndex, field, value) {
-    var payload = { formType: 'update', rowIndex: rowIndex, field: field, value: value, idToken: idToken };
+    var payload = { formType: 'update', rowIndex: rowIndex, field: field, value: value, password: adminPassword };
     fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -364,7 +324,7 @@
   function saveMember() {
     var data = {
       formType: 'addMember',
-      idToken: idToken,
+      password: adminPassword,
       typ: document.getElementById('mTyp').value,
       vorname1: document.getElementById('mVn1').value.trim(),
       nachname1: document.getElementById('mNn1').value.trim(),
