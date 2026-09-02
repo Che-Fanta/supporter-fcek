@@ -93,4 +93,176 @@
       <div class="stat"><div class="val" id="statPaar">–</div><div class="lbl">Gesamt Paar</div></div>
       <div class="stat"><div class="val" id="statPersonen">–</div><div class="lbl">Total Mitglieder (Personen)</div></div>
       <div class="stat"><div class="val" id="statAktiv">–</div><div class="lbl">Aktiv</div></div>
-      <div class="stat"><div class="val" id="statBezahlt">–</div>
+      <div class="stat"><div class="val" id="statBezahlt">–</div><div class="lbl">Beitrag bezahlt</div></div>
+    </div>
+    <div class="card">
+      <h2>Mitgliederliste — alle Felder direkt editierbar</h2>
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="Suchen…" oninput="renderTable()" style="flex:1;min-width:180px">
+        <select id="filterStatus" onchange="renderTable()">
+          <option value="">Alle Status</option>
+          <option>Neu</option><option>Aktiv</option><option>Inaktiv</option>
+        </select>
+        <select id="filterBezahlt" onchange="renderTable()">
+          <option value="">Beitrag alle</option>
+          <option value="Ja">Bezahlt</option><option value="Nein">Nicht bezahlt</option>
+        </select>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
+      </div>
+      <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="addModal">
+  <div class="modal">
+    <h3>Mitglied erfassen</h3>
+    <label>Typ</label>
+    <select id="mTyp" onchange="togglePaar2()"><option>Einzel</option><option>Paar</option></select>
+    <label>Vorname 1</label><input type="text" id="mVn1">
+    <label>Nachname 1</label><input type="text" id="mNn1">
+    <label>E-Mail</label><input type="text" id="mEmail">
+    <div id="mPaarDiv" style="display:none">
+      <label>Vorname 2</label><input type="text" id="mVn2">
+      <label>Nachname 2</label><input type="text" id="mNn2">
+    </div>
+    <label>Status</label>
+    <select id="mStatus" onchange="toggleAustritt()"><option>Neu</option><option>Aktiv</option><option>Inaktiv</option></select>
+    <label>Beitrag bezahlt</label>
+    <select id="mBez"><option>Nein</option><option>Ja</option></select>
+    <label>Eintritt</label>
+    <input type="text" id="mEintritt" placeholder="z.B. 9.2026">
+    <label>Austritt (optional)</label>
+    <input type="month" id="mAustritt" disabled title="Nur editierbar wenn Status = Inaktiv">
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveMember()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAIyF7tsysJsWjAYyHR6Qu5cafx0ujdq9w_eH6iOEtcslAzKBHy1TCmBycTpEyr-0Gkw/exec";
+
+  // WICHTIG: muss exakt der Client-ID aus der Google Cloud Console entsprechen
+  // und mit OAUTH_CLIENT_ID in Code.gs übereinstimmen.
+  const GOOGLE_CLIENT_ID = "715534929141-kg103hsdncrfp43hms9sescn5d2ung40.apps.googleusercontent.com";
+
+  var allMembers = [];
+  var idToken = null;
+  var userEmail = null;
+
+  // ---------- Google Sign-In ----------
+  // Wartet, bis das Google-Skript (accounts.google.com/gsi/client) wirklich
+  // fertig geladen ist, bevor initialize() aufgerufen wird. Ohne das kann es
+  // je nach Ladereihenfolge/Netzwerk-Timing passieren, dass initialize()
+  // zu früh läuft und der Button dann nie erscheint (GSI_LOGGER-Fehler
+  // "Failed to render button before calling initialize()").
+  function waitForGoogleAndInit(retriesLeft) {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      initGoogleSignIn();
+      return;
+    }
+    if (retriesLeft <= 0) {
+      document.getElementById('loginMsg').textContent =
+        'Google-Login konnte nicht geladen werden. Seite neu laden oder Browser-Erweiterungen (Adblocker) prüfen.';
+      document.getElementById('loginMsg').className = 'msg err';
+      return;
+    }
+    setTimeout(function() { waitForGoogleAndInit(retriesLeft - 1); }, 200);
+  }
+
+  function initGoogleSignIn() {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleLogin
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('googleBtn'),
+      { theme: 'filled_blue', size: 'large', text: 'signin_with' }
+    );
+    // Falls schon eingeloggt (Session), automatisch versuchen
+    google.accounts.id.prompt();
+  }
+
+  window.onload = function() {
+    waitForGoogleAndInit(25); // max. ~5 Sekunden warten (25 x 200ms)
+  };
+
+  function handleGoogleLogin(response) {
+    idToken = response.credential;
+    // Grober Blick auf die E-Mail fürs UI (Server prüft nochmal richtig)
+    try {
+      var payload = JSON.parse(atob(idToken.split('.')[1]));
+      userEmail = payload.email;
+    } catch (e) {}
+
+    verifyAndEnter();
+  }
+
+  function verifyAndEnter() {
+    document.getElementById('loginMsg').className = 'msg';
+    fetch(SCRIPT_URL + '?page=data&idToken=' + encodeURIComponent(idToken))
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') {
+          document.getElementById('loginMsg').textContent = result.message || 'Zugriff verweigert.';
+          document.getElementById('loginMsg').className = 'msg err';
+          idToken = null;
+          return;
+        }
+        allMembers = result.data || [];
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('whoAmI').textContent = userEmail || '';
+        updateStats();
+        renderTable();
+      })
+      .catch(function(err) {
+        document.getElementById('loginMsg').textContent = 'Fehler: ' + err.message;
+        document.getElementById('loginMsg').className = 'msg err';
+      });
+  }
+
+  function logout() {
+    idToken = null;
+    userEmail = null;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginGate').style.display = 'flex';
+    google.accounts.id.disableAutoSelect();
+  }
+
+  function loadMembers() { verifyAndEnter(); }
+
+  // ---------- Daten / Tabelle ----------
+  function updateStats() {
+    document.getElementById('statTotal').textContent = allMembers.length;
+    var einzelN = allMembers.filter(function(m) { return m.typ === 'Einzel'; }).length;
+    var paarN = allMembers.filter(function(m) { return m.typ === 'Paar'; }).length;
+    document.getElementById('statEinzel').textContent = einzelN;
+    document.getElementById('statPaar').textContent = paarN;
+    document.getElementById('statPersonen').textContent = einzelN + (paarN * 2);
+    document.getElementById('statAktiv').textContent = allMembers.filter(function(m) { return m.status === 'Aktiv'; }).length;
+    document.getElementById('statBezahlt').textContent = allMembers.filter(function(m) { return m.beitragBezahlt === 'Ja'; }).length;
+  }
+
+  function renderTable() {
+    var q = document.getElementById('search').value.toLowerCase();
+    var fs = document.getElementById('filterStatus').value;
+    var fb = document.getElementById('filterBezahlt').value;
+
+    var filtered = allMembers.filter(function(m) {
+      var text = [m.vorname1, m.nachname1, m.vorname2, m.nachname2, m.email].join(' ').toLowerCase();
+      return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb);
+    });
+
+    if (!filtered.length) {
+      document.getElementById('tableWrap').innerHTML = '<p style="color:#888;padding:16px">Keine Einträge gefunden.</p>';
+      return;
+    }
+
+    var rows = filtered.map(function(m) {
+      return '<tr>' +
+        textCell(m.rowIndex, 'typ', m.typ, true) +
+        textCell(m.rowIndex, 'vorname1', m.vorname1) +
+        textCell(m.rowIndex, 'nachname1', m.nachname1) +
