@@ -3,131 +3,349 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FC Ebnat-Kappel — Event-Anmeldung</title>
+<title>Supporter FCEK – Event-Anmeldung</title>
 <style>
-  :root { --fcek-blue: #021639; --fcek-blue-light: #0a2a5e; --success: #1c7c3f; --error: #c0392b; --border: #d7dbe2; }
+  :root {
+    --fcek-blue: #021639;
+    --fcek-blue-light: #0a2a5e;
+  }
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 0; color: #1a1a1a; }
-  .header { background: var(--fcek-blue); color: #fff; padding: 28px 20px 22px; text-align: center; }
-  .header h1 { margin: 0 0 4px; font-size: 1.4rem; font-weight: 700; }
-  .header p { margin: 0; font-size: 0.9rem; opacity: 0.85; }
-  .wrap { max-width: 480px; margin: -18px auto 40px; padding: 0 16px; }
-  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); padding: 24px 20px 28px; }
-  .event-name { font-weight: 700; color: var(--fcek-blue); font-size: 1.05rem; margin-bottom: 18px; text-align: center; }
-  label { display: block; font-weight: 600; font-size: 0.9rem; margin: 16px 0 6px; }
-  input[type="text"] { width: 100%; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f4f5f7;
+    margin: 0;
+    padding: 0;
+    color: #1a1a1a;
+  }
+  .header {
+    background: var(--fcek-blue);
+    color: #fff;
+    padding: 28px 20px 22px;
+    text-align: center;
+  }
+  .header h1 { margin: 0 0 6px; font-size: 1.4rem; }
+  .header p { margin: 4px 0; font-size: 0.92rem; opacity: 0.9; }
+  .container { max-width: 480px; margin: -18px auto 40px; padding: 0 16px; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 22px 20px 26px;
+    margin-bottom: 16px;
+  }
+  .center-msg { text-align: center; padding: 30px 10px; color: #666; font-size: 0.95rem; }
+  .center-msg .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+  .event-pick-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #e0e2e8;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .event-pick-card:hover { border-color: var(--fcek-blue-light); box-shadow: 0 2px 8px rgba(2,22,57,0.1); }
+  .event-pick-card .ep-icon {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--fcek-blue); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; flex-shrink: 0;
+  }
+  .event-pick-card .ep-name { font-weight: 700; font-size: 0.98rem; color: var(--fcek-blue); }
+  .event-pick-card .ep-meta { font-size: 0.85rem; color: #666; margin-top: 2px; }
+  .back-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.85rem; color: var(--fcek-blue);
+    cursor: pointer; margin-bottom: 14px; font-weight: 600;
+  }
+
+  .section-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--fcek-blue); margin: 0 0 12px;
+  }
+  .section-title .icon {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--fcek-blue); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; flex-shrink: 0;
+  }
+  .program-list { list-style: none; margin: 0 0 22px; padding: 0; }
+  .program-list li {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 8px 0; font-size: 0.9rem; line-height: 1.4;
+    border-bottom: 1px solid #eceef2;
+  }
+  .program-list li:last-child { border-bottom: none; }
+  .program-list .dot { color: var(--fcek-blue); font-size: 1.1rem; line-height: 1; margin-top: 1px; }
+  .timeline { position: relative; margin: 0 0 6px; padding-left: 2px; }
+  .timeline-item { position: relative; padding: 0 0 18px 24px; border-left: 2px solid #d7ddea; }
+  .timeline-item:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
+  .timeline-item::before {
+    content: ''; position: absolute; left: -7px; top: 2px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--fcek-blue); border: 2px solid #fff; box-shadow: 0 0 0 1px #d7ddea;
+  }
+  .timeline-item .t-time { font-weight: 700; color: var(--fcek-blue); font-size: 0.85rem; }
+  .timeline-item .t-desc { font-size: 0.9rem; color: #333; margin-top: 1px; }
+  .deadline {
+    margin-top: 18px; display: flex; align-items: center; gap: 8px;
+    background: #fdecea; color: #b3261e; font-weight: 600;
+    font-size: 0.86rem; padding: 10px 14px; border-radius: 8px;
+  }
+
+  label { display: block; font-weight: 600; margin: 16px 0 6px; font-size: 0.92rem; }
+  input[type="text"] { width: 100%; padding: 11px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
   input[type="text"]:focus { outline: none; border-color: var(--fcek-blue); }
-  .meal-options { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
-  .meal-option { display: flex; align-items: center; gap: 10px; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-  .meal-option:hover { border-color: var(--fcek-blue-light); }
-  .meal-option input[type="radio"] { width: 18px; height: 18px; accent-color: var(--fcek-blue); flex-shrink: 0; }
-  .meal-option.selected { border-color: var(--fcek-blue); background: #eef1f7; }
-  .meal-option span { font-size: 0.95rem; }
-  button { width: 100%; margin-top: 24px; padding: 13px; background: var(--fcek-blue); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
-  button:disabled { opacity: 0.6; cursor: not-allowed; }
-  button:hover:not(:disabled) { background: var(--fcek-blue-light); }
-  .msg { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 0.9rem; display: none; }
-  .msg.error { background: #fdecea; color: var(--error); display: block; }
-  .success-screen { text-align: center; padding: 20px 0; }
-  .success-screen .icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .radio-option {
+    display: flex; align-items: flex-start; gap: 10px; padding: 12px;
+    border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .radio-option:hover { border-color: var(--fcek-blue-light); }
+  .radio-option.selected { border-color: var(--fcek-blue); background: #eef1f7; }
+  .radio-option input[type="radio"] { margin-top: 3px; accent-color: var(--fcek-blue); flex-shrink: 0; }
+  .radio-option .opt-text { font-size: 0.94rem; line-height: 1.35; }
+  .badge-standard {
+    display: inline-block; background: var(--fcek-blue); color: #fff;
+    font-size: 0.7rem; padding: 1px 7px; border-radius: 10px;
+    margin-left: 6px; vertical-align: middle;
+  }
+  button[type="submit"] {
+    width: 100%; background: var(--fcek-blue); color: #fff; border: none;
+    padding: 14px; border-radius: 8px; font-size: 1.02rem; font-weight: 600;
+    margin-top: 22px; cursor: pointer; transition: background 0.15s;
+  }
+  button[type="submit"]:hover { background: var(--fcek-blue-light); }
+  button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+  .status-msg {
+    text-align: center; padding: 14px; border-radius: 8px;
+    margin-top: 14px; font-size: 0.94rem; display: none;
+  }
+  .status-msg.success { background: #e6f4ea; color: #1e7e34; display: block; }
+  .status-msg.error { background: #fdecea; color: #b3261e; display: block; }
+  .success-screen { text-align: center; padding: 10px 0; }
+  .success-screen .checkmark { font-size: 2.6rem; margin-bottom: 8px; }
+  .footer-note { text-align: center; font-size: 0.78rem; color: #888; margin-top: 10px; }
 </style>
 </head>
 <body>
-  <div class="header">
-    <h1>FC Ebnat-Kappel</h1>
-    <p>Anmeldung Event</p>
-  </div>
-  <div class="wrap">
-    <div class="card" id="formCard">
-      <div class="event-name" id="eventName">Vereinsanlass</div>
-      <form id="eventForm">
-        <label for="vorname">Vorname</label>
-        <input type="text" id="vorname" required autocomplete="given-name">
-        <label for="nachname">Nachname</label>
-        <input type="text" id="nachname" required autocomplete="family-name">
-        <label>Essenswahl</label>
-        <div class="meal-options">
-          <label class="meal-option">
-            <input type="radio" name="essen" value="Fitness-Teller, 1 Schnitzel" required>
-            <span>Fitness-Teller — 1 Schnitzel</span>
-          </label>
-          <label class="meal-option">
-            <input type="radio" name="essen" value="Fitness-Teller, 2 Schnitzel">
-            <span>Fitness-Teller — 2 Schnitzel</span>
-          </label>
-          <label class="meal-option">
-            <input type="radio" name="essen" value="Pommes, 1 Schnitzel">
-            <span>Pommes — 1 Schnitzel</span>
-          </label>
-          <label class="meal-option">
-            <input type="radio" name="essen" value="Pommes, 2 Schnitzel">
-            <span>Pommes — 2 Schnitzel</span>
-          </label>
-        </div>
-        <button type="submit" id="submitBtn">Anmelden</button>
-        <div class="msg" id="msg"></div>
-      </form>
-      <div class="success-screen" id="successScreen" style="display:none;">
-        <div class="icon">✅</div>
-        <p><strong>Danke für deine Anmeldung!</strong></p>
-        <p id="successDetail" style="color:#555; font-size:0.9rem;"></p>
-      </div>
-    </div>
-  </div>
-  <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSbHjNjPHhpVuJ-pdd9T2ql7B-6iNrQCQxmZOiY1i9zwxHHQz64zMxzJJHN-6FU0gSug/exec";
-    const EVENT_NAME = "Vereinsanlass";
 
-    document.getElementById('eventName').textContent = EVENT_NAME;
+<div class="header">
+  <h1 id="headerTitle">Event-Anmeldung</h1>
+  <p id="headerSubtitle">Supporter FC Ebnat-Kappel</p>
+</div>
 
-    document.querySelectorAll('.meal-option').forEach(function(opt) {
-      opt.addEventListener('click', function() {
-        document.querySelectorAll('.meal-option').forEach(o => o.classList.remove('selected'));
+<div class="container">
+
+  <div class="card" id="loadingCard">
+    <div class="center-msg"><span class="icon">⏳</span>Events werden geladen …</div>
+  </div>
+
+  <div class="card" id="noEventsCard" style="display:none;">
+    <div class="center-msg"><span class="icon">📭</span>Aktuell ist keine Anmeldung offen.<br>Schau später nochmal vorbei!</div>
+  </div>
+
+  <div class="card" id="pickerCard" style="display:none;">
+    <div class="section-title"><span class="icon">📅</span> Aktuelle Events</div>
+    <div id="pickerList"></div>
+  </div>
+
+  <div id="detailCard" style="display:none;"></div>
+
+  <div class="card success-screen" id="successCard" style="display:none;">
+    <div class="checkmark">✅</div>
+    <h2 style="margin:0 0 6px; color: var(--fcek-blue);">Anmeldung erhalten!</h2>
+    <p style="margin:0; color:#555; font-size:0.94rem;" id="successText">Danke für deine Anmeldung. Wir freuen uns auf dich!</p>
+  </div>
+
+  <div class="footer-note">Supporter FC Ebnat-Kappel</div>
+
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAIyF7tsysJsWjAYyHR6Qu5cafx0ujdq9w_eH6iOEtcslAzKBHy1TCmBycTpEyr-0Gkw/exec"; // Deployment "Supporter FCEK Vorstand" (Code ist gemeinsam genutzt, ?action=events ist öffentlich zugänglich)
+
+  let allEvents = [];
+  let selectedEvent = null;
+
+  function loadEvents() {
+    fetch(SCRIPT_URL + '?action=events')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('loadingCard').style.display = 'none';
+        if (data.result !== 'success' || !data.events || data.events.length === 0) {
+          document.getElementById('noEventsCard').style.display = 'block';
+          return;
+        }
+        allEvents = data.events;
+        if (allEvents.length === 1) {
+          selectEvent(allEvents[0]);
+        } else {
+          renderPicker(allEvents);
+        }
+      })
+      .catch(() => {
+        document.getElementById('loadingCard').style.display = 'none';
+        document.getElementById('noEventsCard').style.display = 'block';
+        document.querySelector('#noEventsCard .center-msg').innerHTML =
+          '<span class="icon">⚠️</span>Events konnten nicht geladen werden.';
+      });
+  }
+
+  function renderPicker(events) {
+    const list = document.getElementById('pickerList');
+    list.innerHTML = '';
+    events.forEach(ev => {
+      const el = document.createElement('div');
+      el.className = 'event-pick-card';
+      el.innerHTML = `
+        <div class="ep-icon">📅</div>
+        <div>
+          <div class="ep-name">${escapeHtml(ev.name)}</div>
+          <div class="ep-meta">${escapeHtml(ev.datum)}${ev.ort ? ' · ' + escapeHtml(ev.ort) : ''}</div>
+        </div>`;
+      el.addEventListener('click', () => selectEvent(ev));
+      list.appendChild(el);
+    });
+    document.getElementById('pickerCard').style.display = 'block';
+  }
+
+  function selectEvent(ev) {
+    selectedEvent = ev;
+    document.getElementById('pickerCard').style.display = 'none';
+    document.getElementById('headerTitle').textContent = ev.name;
+    document.getElementById('headerSubtitle').textContent = [ev.datum, ev.ort].filter(Boolean).join(' · ');
+    renderDetail(ev, allEvents.length > 1);
+  }
+
+  function renderDetail(ev, showBack) {
+    const card = document.getElementById('detailCard');
+    let html = '';
+    if (showBack) html += `<div class="back-link" id="backLink">← Anderes Event wählen</div>`;
+
+    if (ev.programm && ev.programm.length) {
+      html += `<div class="card"><div class="section-title"><span class="icon">🎯</span> Programm</div><ul class="program-list">`;
+      ev.programm.forEach(p => { html += `<li><span class="dot">●</span> ${escapeHtml(p)}</li>`; });
+      html += `</ul>`;
+
+      if (ev.ablauf && ev.ablauf.length) {
+        html += `<div class="section-title"><span class="icon">🕒</span> Ablauf</div><div class="timeline">`;
+        ev.ablauf.forEach(a => {
+          html += `<div class="timeline-item"><div class="t-time">${escapeHtml(a.zeit)}</div><div class="t-desc">${escapeHtml(a.beschreibung)}</div></div>`;
+        });
+        html += `</div>`;
+      }
+      if (ev.anmeldeschluss) html += `<div class="deadline">⏰ Anmeldeschluss: ${escapeHtml(ev.anmeldeschluss)}</div>`;
+      html += `</div>`;
+    }
+
+    html += `<div class="card" id="formCard"><form id="eventForm">
+      <label for="vorname">Vorname</label>
+      <input type="text" id="vorname" name="vorname" required autocomplete="given-name">
+      <label for="nachname">Nachname</label>
+      <input type="text" id="nachname" name="nachname" required autocomplete="family-name">`;
+
+    if (ev.essen && ev.essen.length) {
+      html += `<label>Essenswahl</label><div id="essenGroup">`;
+      ev.essen.forEach((opt, i) => {
+        html += `<label class="radio-option${i === 0 ? ' selected' : ''}">
+          <input type="radio" name="essen" value="${escapeAttr(opt)}" ${i === 0 ? 'checked' : ''}>
+          <span class="opt-text">${escapeHtml(opt)}${i === 0 ? '<span class="badge-standard">Standard</span>' : ''}</span>
+        </label>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `<button type="submit" id="submitBtn">Anmelden</button>
+      <div class="status-msg" id="statusMsg"></div>
+    </form></div>`;
+
+    card.innerHTML = html;
+    card.style.display = 'block';
+
+    if (showBack) {
+      document.getElementById('backLink').addEventListener('click', () => {
+        card.style.display = 'none';
+        document.getElementById('headerTitle').textContent = 'Event-Anmeldung';
+        document.getElementById('headerSubtitle').textContent = 'Supporter FC Ebnat-Kappel';
+        renderPicker(allEvents);
+      });
+    }
+
+    document.querySelectorAll('.radio-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
         opt.classList.add('selected');
       });
     });
 
-    document.getElementById('eventForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      var msg = document.getElementById('msg');
-      msg.style.display = 'none';
-      msg.className = 'msg';
+    document.getElementById('eventForm').addEventListener('submit', onSubmit);
+  }
 
-      var vorname = document.getElementById('vorname').value.trim();
-      var nachname = document.getElementById('nachname').value.trim();
-      var essenRadio = document.querySelector('input[name="essen"]:checked');
+  function onSubmit(e) {
+    e.preventDefault();
+    const vorname = document.getElementById('vorname').value.trim();
+    const nachname = document.getElementById('nachname').value.trim();
+    const essenInput = document.querySelector('input[name="essen"]:checked');
+    const statusMsg = document.getElementById('statusMsg');
+    const submitBtn = document.getElementById('submitBtn');
 
-      if (!vorname || !nachname) { showError('Bitte Vor- und Nachname ausfüllen.'); return; }
-      if (!essenRadio) { showError('Bitte eine Essenswahl auswählen.'); return; }
-
-      var btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.textContent = 'Wird gesendet…';
-
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ formType: 'event', eventName: EVENT_NAME, vorname: vorname, nachname: nachname, essen: essenRadio.value })
-      })
-      .then(function() {
-        document.getElementById('eventForm').style.display = 'none';
-        document.getElementById('successScreen').style.display = 'block';
-        document.getElementById('successDetail').textContent = vorname + ' ' + nachname + ' — ' + essenRadio.value;
-      })
-      .catch(function() {
-        showError('Verbindungsfehler. Bitte nochmals versuchen.');
-        btn.disabled = false;
-        btn.textContent = 'Anmelden';
-      });
-    });
-
-    function showError(text) {
-      var msg = document.getElementById('msg');
-      msg.textContent = text;
-      msg.className = 'msg error';
-      msg.style.display = 'block';
+    if (!vorname || !nachname || (selectedEvent.essen.length > 0 && !essenInput)) {
+      statusMsg.className = 'status-msg error';
+      statusMsg.textContent = 'Bitte alle Felder ausfüllen.';
+      return;
     }
-  </script>
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Wird gesendet...';
+    statusMsg.className = 'status-msg';
+    statusMsg.textContent = '';
+
+    const payload = {
+      formType: 'event',
+      eventId: selectedEvent.id,
+      vorname: vorname,
+      nachname: nachname,
+      essen: essenInput ? essenInput.value : ''
+    };
+
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.result === 'success') {
+        document.getElementById('detailCard').style.display = 'none';
+        document.getElementById('successText').textContent =
+          'Danke für deine Anmeldung zu "' + selectedEvent.name + '". Wir freuen uns auf dich!';
+        document.getElementById('successCard').style.display = 'block';
+      } else {
+        throw new Error(data.message || 'Unbekannter Fehler');
+      }
+    })
+    .catch(err => {
+      statusMsg.className = 'status-msg error';
+      statusMsg.textContent = 'Fehler beim Senden. Bitte nochmals versuchen. (' + err.message + ')';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Anmelden';
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : str;
+    return div.innerHTML;
+  }
+  function escapeAttr(str) { return escapeHtml(str).replace(/"/g, '&quot;'); }
+
+  loadEvents();
+</script>
+
 </body>
 </html>
