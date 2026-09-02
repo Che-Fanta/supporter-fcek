@@ -89,9 +89,11 @@
     <div class="msg" id="globalMsg"></div>
     <div class="stats">
       <div class="stat"><div class="val" id="statTotal">–</div><div class="lbl">Mitgliedschaften total</div></div>
+      <div class="stat"><div class="val" id="statEinzel">–</div><div class="lbl">Gesamt Einzel</div></div>
+      <div class="stat"><div class="val" id="statPaar">–</div><div class="lbl">Gesamt Paar</div></div>
+      <div class="stat"><div class="val" id="statPersonen">–</div><div class="lbl">Total Mitglieder (Personen)</div></div>
       <div class="stat"><div class="val" id="statAktiv">–</div><div class="lbl">Aktiv</div></div>
       <div class="stat"><div class="val" id="statBezahlt">–</div><div class="lbl">Beitrag bezahlt</div></div>
-      <div class="stat"><div class="val" id="statPaar">–</div><div class="lbl">Paarmitgliedschaften</div></div>
     </div>
     <div class="card">
       <h2>Mitgliederliste — alle Felder direkt editierbar</h2>
@@ -130,6 +132,8 @@
     <select id="mBez"><option>Nein</option><option>Ja</option></select>
     <label>Eintritt</label>
     <input type="text" id="mEintritt" placeholder="z.B. 9.2026">
+    <label>Austritt (optional)</label>
+    <input type="month" id="mAustritt">
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveMember()">Speichern</button>
@@ -210,9 +214,13 @@
   // ---------- Daten / Tabelle ----------
   function updateStats() {
     document.getElementById('statTotal').textContent = allMembers.length;
+    var einzelN = allMembers.filter(function(m) { return m.typ === 'Einzel'; }).length;
+    var paarN = allMembers.filter(function(m) { return m.typ === 'Paar'; }).length;
+    document.getElementById('statEinzel').textContent = einzelN;
+    document.getElementById('statPaar').textContent = paarN;
+    document.getElementById('statPersonen').textContent = einzelN + (paarN * 2);
     document.getElementById('statAktiv').textContent = allMembers.filter(function(m) { return m.status === 'Aktiv'; }).length;
     document.getElementById('statBezahlt').textContent = allMembers.filter(function(m) { return m.beitragBezahlt === 'Ja'; }).length;
-    document.getElementById('statPaar').textContent = allMembers.filter(function(m) { return m.typ === 'Paar'; }).length;
   }
 
   function renderTable() {
@@ -241,14 +249,22 @@
         selectCell(m.rowIndex, 'status', m.status, ['Neu','Aktiv','Inaktiv']) +
         selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja']) +
         textCell(m.rowIndex, 'eintritt', m.eintritt, false, 'col-eintritt') +
+        monthCell(m.rowIndex, 'austritt', m.austritt) +
         '</tr>';
     }).join('');
 
     document.getElementById('tableWrap').innerHTML =
       '<table><thead><tr>' +
       '<th>Typ</th><th>Vorname 1</th><th>Nachname 1</th><th>Vorname 2</th><th>Nachname 2</th>' +
-      '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th>' +
+      '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  // Austritt: type="month" erzwingt im Browser automatisch nur Monat+Jahr (YYYY-MM), kein Tag.
+  function monthCell(rowIndex, field, value) {
+    var v = (value === null || value === undefined) ? '' : value;
+    return '<td class="col-eintritt"><input type="month" class="cell-input" value="' + escAttr(v) +
+      '" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
   }
 
   function textCell(rowIndex, field, value, isTyp, extraClass) {
@@ -305,7 +321,8 @@
       nachname2: document.getElementById('mNn2').value.trim(),
       status: document.getElementById('mStatus').value,
       beitragBezahlt: document.getElementById('mBez').value,
-      eintritt: document.getElementById('mEintritt').value.trim()
+      eintritt: document.getElementById('mEintritt').value.trim(),
+      austritt: document.getElementById('mAustritt').value.trim()
     };
     if (!data.vorname1 || !data.nachname1) { alert('Bitte mind. Vorname und Nachname ausfüllen.'); return; }
     fetch(SCRIPT_URL, {
@@ -327,9 +344,9 @@
   }
 
   function exportCsv() {
-    var rows = [['Typ','Vorname1','Nachname1','Vorname2','Nachname2','Email','Status','Beitrag bezahlt','Eintritt']];
+    var rows = [['Typ','Vorname1','Nachname1','Vorname2','Nachname2','Email','Status','Beitrag bezahlt','Eintritt','Austritt']];
     allMembers.forEach(function(m) {
-      rows.push([m.typ, m.vorname1, m.nachname1, m.vorname2||'', m.nachname2||'', m.email, m.status, m.beitragBezahlt, m.eintritt||'']);
+      rows.push([m.typ, m.vorname1, m.nachname1, m.vorname2||'', m.nachname2||'', m.email, m.status, m.beitragBezahlt, m.eintritt||'', m.austritt||'']);
     });
     var csv = rows.map(function(r) {
       return r.map(function(c) {
