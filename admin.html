@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FC Ebnat-Kappel — Vorstand</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root { --fcek-blue: #021639; --fcek-blue-light: #0a2a5e; --border: #d7dbe2; --success: #1c7c3f; --error: #c0392b; }
   * { box-sizing: border-box; }
@@ -11,6 +12,8 @@
   .topbar { background: var(--fcek-blue); color: #fff; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
   .topbar h1 { margin: 0; font-size: 1.1rem; }
   .topbar .sub { font-size: 0.8rem; opacity: 0.75; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .who { font-size: 0.8rem; opacity: 0.85; }
   .wrap { max-width: 1300px; margin: 20px auto; padding: 0 14px 40px; }
   .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
   .stat { background: #fff; border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 130px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); }
@@ -48,41 +51,64 @@
   .modal input, .modal select { width: 100%; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.9rem; }
   .modal-footer { display: flex; gap: 10px; margin-top: 18px; }
   .modal-footer button { flex: 1; }
+
+  /* Login-Gate */
+  #loginGate { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; text-align: center; padding: 20px; }
+  #loginGate h2 { color: var(--fcek-blue); margin-bottom: 0; }
+  #loginGate p { color: #666; max-width: 360px; margin-top: 0; }
+  #app { display: none; }
+
   @media(max-width:600px) { table { font-size: 0.78rem; } th, td { padding: 6px 4px; } }
 </style>
 </head>
 <body>
-<div class="topbar">
-  <div>
-    <h1>FC Ebnat-Kappel — Vorstand</h1>
-    <div class="sub">Supporter-Verwaltung</div>
-  </div>
-  <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
+
+<!-- LOGIN-GATE: sichtbar bis erfolgreicher Google-Login + Admin-Check -->
+<div id="loginGate">
+  <h2>FC Ebnat-Kappel — Vorstand</h2>
+  <p>Bitte mit deinem Google-Konto anmelden. Zugriff nur für hinterlegte Vorstandsmitglieder.</p>
+  <div id="googleBtn"></div>
+  <div class="msg err" id="loginMsg" style="max-width:360px"></div>
 </div>
 
-<div class="wrap">
-  <div class="msg" id="globalMsg"></div>
-  <div class="stats">
-    <div class="stat"><div class="val" id="statTotal">–</div><div class="lbl">Mitgliedschaften total</div></div>
-    <div class="stat"><div class="val" id="statAktiv">–</div><div class="lbl">Aktiv</div></div>
-    <div class="stat"><div class="val" id="statBezahlt">–</div><div class="lbl">Beitrag bezahlt</div></div>
-    <div class="stat"><div class="val" id="statPaar">–</div><div class="lbl">Paarmitgliedschaften</div></div>
-  </div>
-  <div class="card">
-    <h2>Mitgliederliste — alle Felder direkt editierbar</h2>
-    <div class="toolbar">
-      <input type="text" id="search" placeholder="Suchen…" oninput="renderTable()" style="flex:1;min-width:180px">
-      <select id="filterStatus" onchange="renderTable()">
-        <option value="">Alle Status</option>
-        <option>Neu</option><option>Aktiv</option><option>Inaktiv</option>
-      </select>
-      <select id="filterBezahlt" onchange="renderTable()">
-        <option value="">Beitrag alle</option>
-        <option value="Ja">Bezahlt</option><option value="Nein">Nicht bezahlt</option>
-      </select>
-      <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
+<!-- APP: erst sichtbar nach erfolgreichem Login -->
+<div id="app">
+  <div class="topbar">
+    <div>
+      <h1>FC Ebnat-Kappel — Vorstand</h1>
+      <div class="sub">Supporter-Verwaltung</div>
     </div>
-    <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
+    <div class="topbar-right">
+      <span class="who" id="whoAmI"></span>
+      <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
+      <button class="btn btn-outline btn-sm" onclick="logout()">Abmelden</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="msg" id="globalMsg"></div>
+    <div class="stats">
+      <div class="stat"><div class="val" id="statTotal">–</div><div class="lbl">Mitgliedschaften total</div></div>
+      <div class="stat"><div class="val" id="statAktiv">–</div><div class="lbl">Aktiv</div></div>
+      <div class="stat"><div class="val" id="statBezahlt">–</div><div class="lbl">Beitrag bezahlt</div></div>
+      <div class="stat"><div class="val" id="statPaar">–</div><div class="lbl">Paarmitgliedschaften</div></div>
+    </div>
+    <div class="card">
+      <h2>Mitgliederliste — alle Felder direkt editierbar</h2>
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="Suchen…" oninput="renderTable()" style="flex:1;min-width:180px">
+        <select id="filterStatus" onchange="renderTable()">
+          <option value="">Alle Status</option>
+          <option>Neu</option><option>Aktiv</option><option>Inaktiv</option>
+        </select>
+        <select id="filterBezahlt" onchange="renderTable()">
+          <option value="">Beitrag alle</option>
+          <option value="Ja">Bezahlt</option><option value="Nein">Nicht bezahlt</option>
+        </select>
+        <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
+      </div>
+      <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
+    </div>
   </div>
 </div>
 
@@ -113,21 +139,75 @@
 
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSbHjNjPHhpVuJ-pdd9T2ql7B-6iNrQCQxmZOiY1i9zwxHHQz64zMxzJJHN-6FU0gSug/exec";
-  var allMembers = [];
 
-  function loadMembers() {
-    fetch(SCRIPT_URL + '?page=data')
+  // WICHTIG: muss exakt der Client-ID aus der Google Cloud Console entsprechen
+  // und mit OAUTH_CLIENT_ID in Code.gs übereinstimmen.
+  const GOOGLE_CLIENT_ID = "715534929141-kg103hsdncrfp43hms9sescn5d2ung40.apps.googleusercontent.com";
+
+  var allMembers = [];
+  var idToken = null;
+  var userEmail = null;
+
+  // ---------- Google Sign-In ----------
+  window.onload = function() {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleLogin
+    });
+    google.accounts.id.renderButton(
+      document.getElementById('googleBtn'),
+      { theme: 'filled_blue', size: 'large', text: 'signin_with' }
+    );
+    // Falls schon eingeloggt (Session), automatisch versuchen
+    google.accounts.id.prompt();
+  };
+
+  function handleGoogleLogin(response) {
+    idToken = response.credential;
+    // Grober Blick auf die E-Mail fürs UI (Server prüft nochmal richtig)
+    try {
+      var payload = JSON.parse(atob(idToken.split('.')[1]));
+      userEmail = payload.email;
+    } catch (e) {}
+
+    verifyAndEnter();
+  }
+
+  function verifyAndEnter() {
+    document.getElementById('loginMsg').className = 'msg';
+    fetch(SCRIPT_URL + '?page=data&idToken=' + encodeURIComponent(idToken))
       .then(function(res) { return res.json(); })
       .then(function(result) {
+        if (result.status !== 'success') {
+          document.getElementById('loginMsg').textContent = result.message || 'Zugriff verweigert.';
+          document.getElementById('loginMsg').className = 'msg err';
+          idToken = null;
+          return;
+        }
         allMembers = result.data || [];
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('whoAmI').textContent = userEmail || '';
         updateStats();
         renderTable();
       })
       .catch(function(err) {
-        document.getElementById('tableWrap').innerHTML = '<p style="color:red">Fehler beim Laden: ' + err.message + '</p>';
+        document.getElementById('loginMsg').textContent = 'Fehler: ' + err.message;
+        document.getElementById('loginMsg').className = 'msg err';
       });
   }
 
+  function logout() {
+    idToken = null;
+    userEmail = null;
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('loginGate').style.display = 'flex';
+    google.accounts.id.disableAutoSelect();
+  }
+
+  function loadMembers() { verifyAndEnter(); }
+
+  // ---------- Daten / Tabelle ----------
   function updateStats() {
     document.getElementById('statTotal').textContent = allMembers.length;
     document.getElementById('statAktiv').textContent = allMembers.filter(function(m) { return m.status === 'Aktiv'; }).length;
@@ -171,7 +251,6 @@
       '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  // Typ wird als Dropdown gerendert (Einzel/Paar), alles andere als freies Textfeld
   function textCell(rowIndex, field, value, isTyp, extraClass) {
     if (isTyp) return selectCell(rowIndex, field, value, ['Einzel','Paar']);
     var v = (value === null || value === undefined) ? '' : value;
@@ -186,21 +265,26 @@
     return '<td><select class="cell-input" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)">' + opts + '</select></td>';
   }
 
+  // ---------- Schreibende Aktionen (alle mit idToken) ----------
   function updateField(rowIndex, field, value) {
-    var payload = { formType: 'update', rowIndex: rowIndex, field: field, value: value };
+    var payload = { formType: 'update', rowIndex: rowIndex, field: field, value: value, idToken: idToken };
     fetch(SCRIPT_URL, {
       method: 'POST',
-      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
-    }).then(function() {
-      var m = allMembers.find(function(x) { return x.rowIndex === rowIndex; });
-      if (m) m[field] = value;
-      updateStats();
-      showMsg('Gespeichert.', 'ok');
-    }).catch(function(err) {
-      showMsg('Fehler beim Speichern: ' + err.message, 'err');
-    });
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') {
+          showMsg(result.message || 'Fehler beim Speichern.', 'err');
+          return;
+        }
+        var m = allMembers.find(function(x) { return x.rowIndex === rowIndex; });
+        if (m) m[field] = value;
+        updateStats();
+        showMsg('Gespeichert.', 'ok');
+      })
+      .catch(function(err) { showMsg('Fehler beim Speichern: ' + err.message, 'err'); });
   }
 
   function openAddModal() { document.getElementById('addModal').classList.add('open'); }
@@ -212,6 +296,7 @@
   function saveMember() {
     var data = {
       formType: 'addMember',
+      idToken: idToken,
       typ: document.getElementById('mTyp').value,
       vorname1: document.getElementById('mVn1').value.trim(),
       nachname1: document.getElementById('mNn1').value.trim(),
@@ -225,14 +310,20 @@
     if (!data.vorname1 || !data.nachname1) { alert('Bitte mind. Vorname und Nachname ausfüllen.'); return; }
     fetch(SCRIPT_URL, {
       method: 'POST',
-      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(data)
-    }).then(function() {
-      closeModal();
-      setTimeout(loadMembers, 1000);
-      showMsg('Mitglied erfasst.', 'ok');
-    });
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') {
+          showMsg(result.message || 'Fehler beim Erfassen.', 'err');
+          return;
+        }
+        closeModal();
+        setTimeout(loadMembers, 800);
+        showMsg('Mitglied erfasst.', 'ok');
+      })
+      .catch(function(err) { showMsg('Fehler: ' + err.message, 'err'); });
   }
 
   function exportCsv() {
@@ -263,8 +354,6 @@
     var t = (s === null || s === undefined) ? '' : String(s);
     return t.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
-
-  loadMembers();
 </script>
 </body>
 </html>
