@@ -127,13 +127,13 @@
       <label>Nachname 2</label><input type="text" id="mNn2">
     </div>
     <label>Status</label>
-    <select id="mStatus"><option>Neu</option><option>Aktiv</option><option>Inaktiv</option></select>
+    <select id="mStatus" onchange="toggleAustritt()"><option>Neu</option><option>Aktiv</option><option>Inaktiv</option></select>
     <label>Beitrag bezahlt</label>
     <select id="mBez"><option>Nein</option><option>Ja</option></select>
     <label>Eintritt</label>
     <input type="text" id="mEintritt" placeholder="z.B. 9.2026">
     <label>Austritt (optional)</label>
-    <input type="month" id="mAustritt">
+    <input type="month" id="mAustritt" disabled title="Nur editierbar wenn Status = Inaktiv">
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveMember()">Speichern</button>
@@ -246,10 +246,10 @@
         textCell(m.rowIndex, 'vorname2', m.vorname2) +
         textCell(m.rowIndex, 'nachname2', m.nachname2) +
         textCell(m.rowIndex, 'email', m.email, false, 'col-email') +
-        selectCell(m.rowIndex, 'status', m.status, ['Neu','Aktiv','Inaktiv']) +
+        statusCell(m.rowIndex, m.status) +
         selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja']) +
         textCell(m.rowIndex, 'eintritt', m.eintritt, false, 'col-eintritt') +
-        monthCell(m.rowIndex, 'austritt', m.austritt) +
+        monthCell(m.rowIndex, 'austritt', m.austritt, m.status !== 'Inaktiv') +
         '</tr>';
     }).join('');
 
@@ -261,10 +261,11 @@
   }
 
   // Austritt: type="month" erzwingt im Browser automatisch nur Monat+Jahr (YYYY-MM), kein Tag.
-  function monthCell(rowIndex, field, value) {
+  function monthCell(rowIndex, field, value, disabled) {
     var v = (value === null || value === undefined) ? '' : value;
-    return '<td class="col-eintritt"><input type="month" class="cell-input" value="' + escAttr(v) +
-      '" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
+    return '<td class="col-eintritt"><input type="month" id="austritt-' + rowIndex + '" class="cell-input" value="' + escAttr(v) +
+      '"' + (disabled ? ' disabled title="Nur editierbar wenn Status = Inaktiv"' : '') +
+      ' onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
   }
 
   function textCell(rowIndex, field, value, isTyp, extraClass) {
@@ -279,6 +280,33 @@
       return '<option' + (value === o ? ' selected' : '') + '>' + o + '</option>';
     }).join('');
     return '<td><select class="cell-input" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)">' + opts + '</select></td>';
+  }
+
+  // Status-Dropdown: Austritt-Feld wird nur freigeschaltet, wenn Status = Inaktiv.
+  function statusCell(rowIndex, value) {
+    var options = ['Neu','Aktiv','Inaktiv'];
+    var opts = options.map(function(o) {
+      return '<option' + (value === o ? ' selected' : '') + '>' + o + '</option>';
+    }).join('');
+    return '<td><select class="cell-input" onchange="onStatusChange(this,' + rowIndex + ')">' + opts + '</select></td>';
+  }
+
+  function onStatusChange(selectEl, rowIndex) {
+    var newVal = selectEl.value;
+    var austrittInput = document.getElementById('austritt-' + rowIndex);
+
+    if (austrittInput) {
+      if (newVal === 'Inaktiv') {
+        austrittInput.disabled = false;
+        austrittInput.title = '';
+        austrittInput.focus();
+      } else {
+        austrittInput.disabled = true;
+        austrittInput.title = 'Nur editierbar wenn Status = Inaktiv';
+      }
+    }
+
+    updateField(rowIndex, 'status', newVal);
   }
 
   // ---------- Schreibende Aktionen (alle mit idToken) ----------
@@ -307,6 +335,14 @@
   function closeModal() { document.getElementById('addModal').classList.remove('open'); }
   function togglePaar2() {
     document.getElementById('mPaarDiv').style.display = document.getElementById('mTyp').value === 'Paar' ? 'block' : 'none';
+  }
+
+  function toggleAustritt() {
+    var isInaktiv = document.getElementById('mStatus').value === 'Inaktiv';
+    var el = document.getElementById('mAustritt');
+    el.disabled = !isInaktiv;
+    el.title = isInaktiv ? '' : 'Nur editierbar wenn Status = Inaktiv';
+    if (!isInaktiv) el.value = '';
   }
 
   function saveMember() {
