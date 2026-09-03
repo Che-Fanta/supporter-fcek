@@ -59,6 +59,21 @@
   #loginForm button { padding: 11px; }
   #app { display: none; }
 
+  .tabs { display: flex; gap: 4px; margin-bottom: 18px; border-bottom: 2px solid var(--border); }
+  .tab-btn {
+    padding: 10px 18px; border: none; background: none; cursor: pointer;
+    font-size: 0.92rem; font-weight: 600; color: #666;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+  }
+  .tab-btn.active { color: var(--fcek-blue); border-bottom-color: var(--fcek-blue); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .event-filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+  .event-count-badge {
+    background: var(--fcek-blue); color: #fff; font-size: 0.78rem;
+    padding: 2px 9px; border-radius: 10px; font-weight: 600;
+  }
+
   @media(max-width:600px) { table { font-size: 0.78rem; } th, td { padding: 6px 4px; } }
 </style>
 </head>
@@ -90,6 +105,13 @@
 
   <div class="wrap">
     <div class="msg" id="globalMsg"></div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tabBtnMembers" onclick="switchTab('members')">Mitglieder</button>
+      <button class="tab-btn" id="tabBtnEvents" onclick="switchTab('events')">Event-Anmeldungen</button>
+    </div>
+
+    <div class="tab-panel active" id="tabMembers">
     <div class="stats">
       <div class="stat"><div class="val" id="statTotal">–</div><div class="lbl">Mitgliedschaften total</div></div>
       <div class="stat"><div class="val" id="statEinzel">–</div><div class="lbl">Gesamt Einzel</div></div>
@@ -113,6 +135,22 @@
         <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
       </div>
       <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
+    </div>
+    </div>
+
+    <div class="tab-panel" id="tabEvents">
+    <div class="card">
+      <h2>Event-Anmeldungen <span class="event-count-badge" id="eventSignupCount">0</span></h2>
+      <div class="event-filter-bar">
+        <input type="text" id="eventSearch" placeholder="Suchen…" oninput="renderEventTable()" style="flex:1;min-width:180px">
+        <select id="filterEventName" onchange="renderEventTable()">
+          <option value="">Alle Events</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="exportEventsCsv()">CSV Export</button>
+        <button class="btn btn-outline btn-sm" onclick="loadEventSignups()">Aktualisieren</button>
+      </div>
+      <div id="eventTableWrap"><div class="loading">Wird geladen…</div></div>
+    </div>
     </div>
   </div>
 </div>
@@ -173,6 +211,7 @@
         document.getElementById('app').style.display = 'block';
         updateStats();
         renderTable();
+        loadEventSignups();
       })
       .catch(function(err) {
         document.getElementById('loginMsg').textContent = 'Fehler: ' + err.message;
@@ -188,6 +227,97 @@
   }
 
   function loadMembers() { verifyAndEnter(); }
+
+  // ---------- Tabs ----------
+  function switchTab(tab) {
+    document.getElementById('tabBtnMembers').classList.toggle('active', tab === 'members');
+    document.getElementById('tabBtnEvents').classList.toggle('active', tab === 'events');
+    document.getElementById('tabMembers').classList.toggle('active', tab === 'members');
+    document.getElementById('tabEvents').classList.toggle('active', tab === 'events');
+  }
+
+  // ---------- Event-Anmeldungen ----------
+  var allEventSignups = [];
+
+  function loadEventSignups() {
+    document.getElementById('eventTableWrap').innerHTML = '<div class="loading">Wird geladen…</div>';
+    fetch(SCRIPT_URL + '?page=eventSignups&password=' + encodeURIComponent(adminPassword))
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') {
+          document.getElementById('eventTableWrap').innerHTML =
+            '<p style="color:#c0392b;padding:16px">' + (result.message || 'Fehler beim Laden.') + '</p>';
+          return;
+        }
+        allEventSignups = result.data || [];
+        populateEventFilter();
+        renderEventTable();
+      })
+      .catch(function(err) {
+        document.getElementById('eventTableWrap').innerHTML =
+          '<p style="color:#c0392b;padding:16px">Fehler: ' + err.message + '</p>';
+      });
+  }
+
+  function populateEventFilter() {
+    var select = document.getElementById('filterEventName');
+    var current = select.value;
+    var names = Array.from(new Set(allEventSignups.map(function(s) { return s.event; }))).filter(Boolean).sort();
+    select.innerHTML = '<option value="">Alle Events</option>' +
+      names.map(function(n) { return '<option' + (n === current ? ' selected' : '') + '>' + escAttr(n) + '</option>'; }).join('');
+  }
+
+  function renderEventTable() {
+    var q = document.getElementById('eventSearch').value.toLowerCase();
+    var fe = document.getElementById('filterEventName').value;
+
+    var filtered = allEventSignups.filter(function(s) {
+      var text = [s.vorname, s.nachname, s.event, s.essen].join(' ').toLowerCase();
+      return (!q || text.includes(q)) && (!fe || s.event === fe);
+    });
+
+    document.getElementById('eventSignupCount').textContent = filtered.length;
+
+    if (!filtered.length) {
+      document.getElementById('eventTableWrap').innerHTML = '<p style="color:#888;padding:16px">Keine Anmeldungen gefunden.</p>';
+      return;
+    }
+
+    // Neueste zuerst
+    filtered = filtered.slice().reverse();
+
+    var rows = filtered.map(function(s) {
+      return '<tr>' +
+        '<td>' + escAttr(s.timestamp) + '</td>' +
+        '<td>' + escAttr(s.event) + '</td>' +
+        '<td>' + escAttr(s.vorname) + '</td>' +
+        '<td>' + escAttr(s.nachname) + '</td>' +
+        '<td>' + escAttr(s.essen) + '</td>' +
+        '</tr>';
+    }).join('');
+
+    document.getElementById('eventTableWrap').innerHTML =
+      '<table><thead><tr>' +
+      '<th>Zeitpunkt</th><th>Event</th><th>Vorname</th><th>Nachname</th><th>Essenswahl</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function exportEventsCsv() {
+    var rows = [['Timestamp','Event','Vorname','Nachname','Essenswahl']];
+    allEventSignups.forEach(function(s) {
+      rows.push([s.timestamp, s.event, s.vorname, s.nachname, s.essen]);
+    });
+    var csv = rows.map(function(r) {
+      return r.map(function(c) {
+        var s = (c||'').toString();
+        return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g,'""') + '"' : s;
+      }).join(',');
+    }).join('\n');
+    var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'event-anmeldungen.csv'; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // ---------- Daten / Tabelle ----------
   function updateStats() {
