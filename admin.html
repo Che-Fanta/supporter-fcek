@@ -39,10 +39,11 @@
   .col-eintritt .cell-input { min-width: 110px; }
   .col-email .cell-input { min-width: 150px; }
   .col-bemerkung { text-align: center; }
-  .bemerkung-link { background: none; border: none; cursor: pointer; color: var(--fcek-blue); font-size: 0.85rem; padding: 4px 8px; border-radius: 5px; text-decoration: underline; }
+  .bemerkung-link { background: none; border: none; cursor: pointer; color: var(--fcek-blue); font-size: 0.85rem; padding: 4px 8px; border-radius: 5px; text-decoration: underline; display: inline-flex; align-items: center; gap: 5px; }
   .bemerkung-link:hover { background: #eef1f6; }
   .bemerkung-link.empty { color: #aab; text-decoration: none; }
   .bemerkung-link.empty:hover { text-decoration: underline; }
+  .bemerkung-dot { width: 7px; height: 7px; border-radius: 50%; background: #d9a300; flex-shrink: 0; }
   #bemerkungModal textarea { width: 100%; min-height: 120px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.9rem; font-family: inherit; resize: vertical; }
   .loading { text-align: center; padding: 30px; color: #888; }
   .msg { padding: 10px 14px; border-radius: 7px; font-size: 0.88rem; margin-bottom: 12px; display: none; }
@@ -400,9 +401,11 @@
   function bemerkungCell(rowIndex, value) {
     var v = (value === null || value === undefined) ? '' : String(value);
     var hasText = v.trim().length > 0;
-    var label = hasText ? (v.length > 24 ? v.slice(0, 24) + '…' : v) : '+ hinzufügen';
+    var label = hasText ? (v.length > 20 ? v.slice(0, 20) + '…' : v) : '+ hinzufügen';
+    var dot = hasText ? '<span class="bemerkung-dot"></span>' : '';
+    var tooltip = hasText ? ' title="' + escAttr(v) + '"' : '';
     return '<td class="col-bemerkung"><button type="button" class="bemerkung-link' + (hasText ? '' : ' empty') +
-      '" onclick="openBemerkungModal(' + rowIndex + ')">' + escAttr(label) + '</button></td>';
+      '"' + tooltip + ' onclick="openBemerkungModal(' + rowIndex + ')">' + dot + escAttr(label) + '</button></td>';
   }
 
   function openBemerkungModal(rowIndex) {
