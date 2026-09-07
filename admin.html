@@ -38,7 +38,12 @@
   select.cell-input { min-width: 78px; }
   .col-eintritt .cell-input { min-width: 110px; }
   .col-email .cell-input { min-width: 150px; }
-  .col-bemerkung .cell-input { min-width: 140px; }
+  .col-bemerkung { text-align: center; }
+  .bemerkung-link { background: none; border: none; cursor: pointer; color: var(--fcek-blue); font-size: 0.85rem; padding: 4px 8px; border-radius: 5px; text-decoration: underline; }
+  .bemerkung-link:hover { background: #eef1f6; }
+  .bemerkung-link.empty { color: #aab; text-decoration: none; }
+  .bemerkung-link.empty:hover { text-decoration: underline; }
+  #bemerkungModal textarea { width: 100%; min-height: 120px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.9rem; font-family: inherit; resize: vertical; }
   .loading { text-align: center; padding: 30px; color: #888; }
   .msg { padding: 10px 14px; border-radius: 7px; font-size: 0.88rem; margin-bottom: 12px; display: none; }
   .msg.ok { background: #d1e7dd; color: var(--success); display: block; }
@@ -161,6 +166,17 @@
       </div>
       <div id="eventTableWrap"><div class="loading">Wird geladen…</div></div>
     </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="bemerkungModal">
+  <div class="modal">
+    <h3 id="bemerkungModalTitle">Bemerkung</h3>
+    <textarea id="bemerkungText"></textarea>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeBemerkungModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="saveBemerkungModal()">Speichern</button>
     </div>
   </div>
 </div>
@@ -370,7 +386,7 @@
         selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja']) +
         textCell(m.rowIndex, 'eintritt', m.eintritt, false, 'col-eintritt') +
         monthCell(m.rowIndex, 'austritt', m.austritt, m.status !== 'Inaktiv') +
-        textCell(m.rowIndex, 'bemerkung', m.bemerkung, false, 'col-bemerkung') +
+        bemerkungCell(m.rowIndex, m.bemerkung) +
         '</tr>';
     }).join('');
 
@@ -379,6 +395,37 @@
       '<th>Typ</th><th>Vorname 1</th><th>Nachname 1</th><th>Vorname 2</th><th>Nachname 2</th>' +
       '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function bemerkungCell(rowIndex, value) {
+    var v = (value === null || value === undefined) ? '' : String(value);
+    var hasText = v.trim().length > 0;
+    var label = hasText ? (v.length > 24 ? v.slice(0, 24) + '…' : v) : '+ hinzufügen';
+    return '<td class="col-bemerkung"><button type="button" class="bemerkung-link' + (hasText ? '' : ' empty') +
+      '" onclick="openBemerkungModal(' + rowIndex + ')">' + escAttr(label) + '</button></td>';
+  }
+
+  function openBemerkungModal(rowIndex) {
+    var m = allMembers.find(function(x) { return x.rowIndex === rowIndex; });
+    if (!m) return;
+    document.getElementById('bemerkungModalTitle').textContent =
+      'Bemerkung — ' + (m.vorname1 || '') + ' ' + (m.nachname1 || '');
+    document.getElementById('bemerkungText').value = m.bemerkung || '';
+    document.getElementById('bemerkungModal').dataset.rowIndex = rowIndex;
+    document.getElementById('bemerkungModal').classList.add('open');
+    setTimeout(function() { document.getElementById('bemerkungText').focus(); }, 50);
+  }
+
+  function closeBemerkungModal() {
+    document.getElementById('bemerkungModal').classList.remove('open');
+  }
+
+  function saveBemerkungModal() {
+    var rowIndex = Number(document.getElementById('bemerkungModal').dataset.rowIndex);
+    var value = document.getElementById('bemerkungText').value;
+    updateField(rowIndex, 'bemerkung', value);
+    renderTable();
+    closeBemerkungModal();
   }
 
   function monthCell(rowIndex, field, value, disabled) {
