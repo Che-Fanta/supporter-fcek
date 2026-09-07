@@ -38,6 +38,7 @@
   select.cell-input { min-width: 78px; }
   .col-eintritt .cell-input { min-width: 110px; }
   .col-email .cell-input { min-width: 150px; }
+  .col-bemerkung .cell-input { min-width: 140px; }
   .loading { text-align: center; padding: 30px; color: #888; }
   .msg { padding: 10px 14px; border-radius: 7px; font-size: 0.88rem; margin-bottom: 12px; display: none; }
   .msg.ok { background: #d1e7dd; color: var(--success); display: block; }
@@ -184,6 +185,8 @@
     <input type="text" id="mEintritt" placeholder="z.B. 9.2026">
     <label>Austritt (optional)</label>
     <input type="month" id="mAustritt" disabled title="Nur editierbar wenn Status = Inaktiv">
+    <label>Bemerkung</label>
+    <input type="text" id="mBemerkung" placeholder="Optional">
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveMember()">Speichern</button>
@@ -346,7 +349,7 @@
     var fb = document.getElementById('filterBezahlt').value;
 
     var filtered = allMembers.filter(function(m) {
-      var text = [m.vorname1, m.nachname1, m.vorname2, m.nachname2, m.email].join(' ').toLowerCase();
+      var text = [m.vorname1, m.nachname1, m.vorname2, m.nachname2, m.email, m.bemerkung].join(' ').toLowerCase();
       return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb);
     });
 
@@ -367,13 +370,14 @@
         selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja']) +
         textCell(m.rowIndex, 'eintritt', m.eintritt, false, 'col-eintritt') +
         monthCell(m.rowIndex, 'austritt', m.austritt, m.status !== 'Inaktiv') +
+        textCell(m.rowIndex, 'bemerkung', m.bemerkung, false, 'col-bemerkung') +
         '</tr>';
     }).join('');
 
     document.getElementById('tableWrap').innerHTML =
       '<table><thead><tr>' +
       '<th>Typ</th><th>Vorname 1</th><th>Nachname 1</th><th>Vorname 2</th><th>Nachname 2</th>' +
-      '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th>' +
+      '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
@@ -473,7 +477,8 @@
       status: document.getElementById('mStatus').value,
       beitragBezahlt: document.getElementById('mBez').value,
       eintritt: document.getElementById('mEintritt').value.trim(),
-      austritt: document.getElementById('mAustritt').value.trim()
+      austritt: document.getElementById('mAustritt').value.trim(),
+      bemerkung: document.getElementById('mBemerkung').value.trim()
     };
     if (!data.vorname1 || !data.nachname1) { alert('Bitte mind. Vorname und Nachname ausfüllen.'); return; }
     fetch(SCRIPT_URL, {
@@ -495,9 +500,9 @@
   }
 
   function exportCsv() {
-    var rows = [['Typ','Vorname1','Nachname1','Vorname2','Nachname2','Email','Status','Beitrag bezahlt','Eintritt','Austritt']];
+    var rows = [['Typ','Vorname1','Nachname1','Vorname2','Nachname2','Email','Status','Beitrag bezahlt','Eintritt','Austritt','Bemerkung']];
     allMembers.forEach(function(m) {
-      rows.push([m.typ, m.vorname1, m.nachname1, m.vorname2||'', m.nachname2||'', m.email, m.status, m.beitragBezahlt, m.eintritt||'', m.austritt||'']);
+      rows.push([m.typ, m.vorname1, m.nachname1, m.vorname2||'', m.nachname2||'', m.email, m.status, m.beitragBezahlt, m.eintritt||'', m.austritt||'', m.bemerkung||'']);
     });
     var csv = rows.map(function(r) {
       return r.map(function(c) {
