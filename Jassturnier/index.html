@@ -33,18 +33,17 @@
     padding:2.2rem 1.5rem 2.6rem;
     text-align:center;
   }
-  header .logo-wrap{
-    display:inline-block; background:#fff; border-radius:10px;
-    padding:.5rem .9rem .4rem; margin:0 0 1rem;
+  header .title-row{
+    display:flex; align-items:center; justify-content:center; gap:.7rem;
   }
   header .logo{
-    height:56px; width:auto; display:block;
+    height:52px; width:auto; flex-shrink:0;
   }
   header h1{
     font-family:Georgia,'Times New Roman',serif;
     font-weight:700;
     font-size:clamp(1.6rem,4vw,2.4rem);
-    margin:0 0 .3rem;
+    margin:0;
   }
   header p.sub{
     margin:0; color:var(--gold-light); font-size:.95rem;
@@ -142,6 +141,7 @@
   .tv-waiting{text-align:center; color:var(--muted); padding:2rem 1rem; font-size:1.05rem;}
   @media(max-width:480px){
     header{padding:1.6rem 1rem 2rem;}
+    header .logo{height:38px;}
     .game-grid-head, .game-row, .table-totals{grid-template-columns:3.2rem 1fr 1fr; gap:.35rem;}
     .game-row input[type=number]{padding:.35rem .2rem; font-size:.9rem;}
   }
@@ -150,8 +150,10 @@
 <body>
 
 <header>
-  <div class="logo-wrap"><img class="logo" src="logo.png" alt="Supporter FCEK"></div>
-  <h1>Jassturnier Supporter FCEK</h1>
+  <div class="title-row">
+    <img class="logo" src="logo-icon.png" alt="Supporter FCEK">
+    <h1>Jassturnier Supporter FCEK</h1>
+  </div>
   <p class="sub">Schieber &middot; Auslosung &middot; Rangliste</p>
 </header>
 
