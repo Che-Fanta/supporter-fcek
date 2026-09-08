@@ -3,356 +3,652 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FC Ebnat-Kappel — Jassturnier</title>
+<title>Jassturnier Supporter FCEK</title>
 <style>
-  :root { --fcek-blue: #021639; --fcek-blue-light: #0a2a5e; --success: #1c7c3f; --error: #c0392b; --border: #d7dbe2; --gold: #d4af37; --silver: #a8a8a8; --bronze: #cd7f32; }
-  * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #f4f5f7; margin: 0; padding: 0; color: #1a1a1a; }
-  .header { background: var(--fcek-blue); color: #fff; padding: 28px 20px 22px; text-align: center; }
-  .header h1 { margin: 0 0 4px; font-size: 1.4rem; font-weight: 700; }
-  .header p { margin: 0; font-size: 0.9rem; opacity: 0.85; }
-  .wrap { max-width: 720px; margin: -18px auto 40px; padding: 0 16px; }
-  .card { background: #fff; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); padding: 24px 20px 28px; margin-bottom: 20px; }
-  .section-title { font-weight: 700; color: var(--fcek-blue); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-  label { display: block; font-weight: 600; font-size: 0.9rem; margin: 14px 0 5px; }
-  textarea { width: 100%; min-height: 160px; padding: 11px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical; }
-  textarea:focus, input:focus { outline: none; border-color: var(--fcek-blue); }
-  button { padding: 13px 20px; background: var(--fcek-blue); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
-  button:disabled { opacity: 0.5; cursor: not-allowed; }
-  button:hover:not(:disabled) { background: var(--fcek-blue-light); }
-  button.secondary { background: #eef1f7; color: var(--fcek-blue); }
-  button.secondary:hover:not(:disabled) { background: #dde3ee; }
-  .btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-  .msg { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 0.9rem; }
-  .msg.error { background: #fdecea; color: var(--error); }
-  .msg.info { background: #f0f4ff; color: #444; }
-  .table-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
-  .table-card h3 { margin: 0 0 10px; font-size: 1rem; color: var(--fcek-blue); }
-  .team-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .team-names { flex: 1; font-size: 0.92rem; }
-  .team-row input[type="number"] { width: 90px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 1rem; text-align: right; }
-  .control-line { font-size: 0.85rem; margin-top: 6px; font-weight: 600; }
-  .control-line.ok { color: var(--success); }
-  .control-line.bad { color: var(--error); }
-  .paused-box { background: #fff8e6; border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; color: #6b5300; margin-bottom: 14px; }
-  table.ranking { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
-  table.ranking th, table.ranking td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--border); }
-  table.ranking th { color: #666; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
-  table.ranking tr.final-1 { background: #fff9e5; }
-  table.ranking tr.final-2 { background: #f4f4f4; }
-  table.ranking tr.final-3 { background: #fbeee2; }
-  .medal { font-size: 1.1rem; margin-right: 4px; }
-  .round-label { display: inline-block; background: var(--fcek-blue); color: #fff; font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; margin-bottom: 4px; }
-  .sync-status { text-align: center; font-size: 0.78rem; color: #888; margin: -8px 0 16px; }
-  .final-banner { text-align: center; padding: 8px 0 4px; }
-  .final-banner .icon { font-size: 2rem; }
+  :root{
+    --navy:#021639;
+    --navy-2:#0a2452;
+    --gold:#c9a227;
+    --gold-light:#e8d38a;
+    --cream:#f4f1e6;
+    --paper:#ffffff;
+    --ink:#1b2233;
+    --muted:#6b7280;
+    --red:#7a2e2e;
+    --green:#2f4a3c;
+    --line:#e2ddc9;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Source Sans 3','Segoe UI',Arial,sans-serif;
+    line-height:1.5;
+    padding:0 0 4rem;
+  }
+  header{
+    background:var(--navy);
+    color:var(--cream);
+    padding:2.2rem 1.5rem 2.6rem;
+    text-align:center;
+  }
+  header h1{
+    font-family:Georgia,'Times New Roman',serif;
+    font-weight:700;
+    font-size:clamp(1.6rem,4vw,2.4rem);
+    margin:0 0 .3rem;
+  }
+  header p.sub{
+    margin:0; color:var(--gold-light); font-size:.95rem;
+    letter-spacing:.04em; text-transform:uppercase;
+  }
+  main{max-width:820px; margin:0 auto; padding:0 1.2rem;}
+  .card{
+    background:var(--paper); border:1px solid var(--line); border-radius:6px;
+    padding:1.6rem; margin-top:1.6rem; box-shadow:0 1px 2px rgba(2,22,57,.04);
+  }
+  .card h2{font-family:Georgia,serif; font-size:1.3rem; margin:0 0 .2rem; color:var(--navy);}
+  .card .desc{color:var(--muted); font-size:.92rem; margin:0 0 1.1rem;}
+  label{display:block; font-size:.85rem; color:var(--muted); margin-bottom:.3rem; font-weight:600;}
+  textarea, input[type=number], input[type=text]{
+    width:100%; font-family:inherit; font-size:1rem; padding:.6rem .7rem;
+    border:1px solid #c9c3ab; border-radius:4px; background:#fffdf7; color:var(--ink);
+  }
+  textarea{min-height:130px; resize:vertical;}
+  textarea:focus, input:focus{outline:2px solid var(--gold); outline-offset:1px;}
+  .btn{
+    display:inline-flex; align-items:center; gap:.4rem; background:var(--navy); color:#fff;
+    border:none; padding:.65rem 1.3rem; border-radius:4px; font-size:.95rem; font-weight:600; cursor:pointer;
+  }
+  .btn:hover{background:var(--navy-2);}
+  .btn.gold{background:var(--gold); color:var(--navy);}
+  .btn.gold:hover{background:var(--gold-light);}
+  .btn.ghost{background:transparent; color:var(--navy); border:1px solid var(--navy);}
+  .btn.ghost:hover{background:rgba(2,22,57,.06);}
+  .btn:disabled{opacity:.4; cursor:not-allowed;}
+  .row{display:flex; gap:.8rem; flex-wrap:wrap; margin-top:1rem;}
+  .player-count{font-size:.85rem; color:var(--muted); margin-top:.4rem;}
+  .round-label{
+    display:inline-block; background:var(--navy); color:var(--gold-light); font-size:.78rem;
+    font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:.25rem .7rem;
+    border-radius:3px; margin-bottom:.9rem;
+  }
+  .table-block{border:1px solid var(--line); border-radius:6px; padding:1rem 1.1rem; margin-bottom:.9rem; background:#fffdf7;}
+  .table-block .tnum{font-family:Georgia,serif; font-weight:700; color:var(--navy); font-size:1.02rem; margin-bottom:.6rem;}
+  .game-grid-head{
+    display:grid; grid-template-columns:5rem 1fr 1fr; gap:.5rem; font-size:.78rem; font-weight:700;
+    color:var(--navy); padding-bottom:.35rem; border-bottom:1px solid var(--line); margin-bottom:.3rem;
+  }
+  .game-row{display:grid; grid-template-columns:5rem 1fr 1fr; gap:.5rem; align-items:center; padding:.25rem 0;}
+  .game-row .game-num{font-size:.82rem; color:var(--muted);}
+  .game-row input[type=number]{text-align:center; padding:.4rem .3rem;}
+  .table-totals{
+    display:grid; grid-template-columns:5rem 1fr 1fr; gap:.5rem; align-items:center;
+    margin-top:.4rem; padding-top:.5rem; border-top:2px solid var(--navy);
+  }
+  .table-totals .tt-label{font-size:.78rem; font-weight:700; color:var(--navy);}
+  .table-totals .tt-val{text-align:center; font-weight:700; font-family:Georgia,serif; color:var(--navy); font-size:1.05rem;}
+  .table-totals .check-note{grid-column:1 / -1;}
+  .check-note{font-size:.82rem; margin-top:.5rem; padding:.4rem .6rem; border-radius:4px;}
+  .check-ok{color:var(--green); background:#eaf3ee; border:1px solid #cfe3d8;}
+  .check-bad{color:var(--red); background:#fbeeee; border:1px solid #edd0d0; font-weight:600;}
+  .pause-note{
+    font-size:.85rem; color:var(--red); background:#fbeeee; border:1px solid #edd0d0;
+    border-radius:4px; padding:.5rem .7rem; margin-bottom:.9rem;
+  }
+  table.rangliste{width:100%; border-collapse:collapse; font-size:.95rem;}
+  table.rangliste th{
+    text-align:left; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--muted); border-bottom:2px solid var(--navy); padding:.4rem .5rem;
+  }
+  table.rangliste td{padding:.55rem .5rem; border-bottom:1px solid var(--line);}
+  table.rangliste tr.rank1 td{background:#fbf3d9; font-weight:700;}
+  table.rangliste tr.rank2 td{background:#f3f3f3; font-weight:600;}
+  table.rangliste tr.rank3 td{background:#f6ece2; font-weight:600;}
+  .rank-num{font-family:Georgia,serif; font-weight:700; color:var(--navy); width:2rem;}
+  .medal{margin-right:.25rem;}
+  .footer-actions{display:flex; justify-content:space-between; align-items:center; margin-top:1.4rem; flex-wrap:wrap; gap:.6rem;}
+  .status-msg{font-size:.85rem; color:var(--muted);}
+  .hidden{display:none;}
+  .qr-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:1rem;}
+  .qr-item{text-align:center; border:1px solid var(--line); border-radius:6px; padding:.8rem; background:#fffdf7;}
+  .qr-item .qr-canvas-wrap{display:flex; justify-content:center; margin-bottom:.5rem;}
+  .qr-item .qr-label{font-family:Georgia,serif; font-weight:700; color:var(--navy); font-size:.95rem;}
+  .qr-item .qr-url{font-size:.72rem; color:var(--muted); word-break:break-all; margin-top:.2rem;}
+  .sync-status{text-align:center; font-size:.78rem; color:#888; margin:.6rem 0 0;}
+
+  /* Tisch-Ansicht: möglichst grosse, einfache Eingabe (auch für ältere/wenig technikaffine Spieler) */
+  #table-view{max-width:520px;}
+  #table-view header{text-align:center;}
+  .tv-tischnum{font-family:Georgia,serif; font-size:2rem; font-weight:700; color:var(--navy); text-align:center; margin:1.4rem 0 .2rem;}
+  .tv-round{text-align:center; color:var(--muted); font-size:.95rem; margin-bottom:1.2rem;}
+  .tv-teams{display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:.8rem;}
+  .tv-team-name{background:var(--navy); color:var(--cream); border-radius:6px; padding:.6rem; text-align:center; font-weight:700; font-size:.95rem;}
+  .tv-game-row{
+    display:grid; grid-template-columns:3.5rem 1fr 1fr; gap:.6rem; align-items:center;
+    padding:.5rem 0; border-bottom:1px solid var(--line);
+  }
+  .tv-game-row .game-num{font-weight:700; color:var(--muted); text-align:center;}
+  .tv-game-row input[type=number]{text-align:center; font-size:1.2rem; font-weight:700; padding:.7rem .3rem;}
+  .tv-totals{margin-top:1rem; padding-top:.8rem; border-top:2px solid var(--navy);}
+  .tv-waiting{text-align:center; color:var(--muted); padding:2rem 1rem; font-size:1.05rem;}
+  @media(max-width:480px){
+    header{padding:1.6rem 1rem 2rem;}
+    .game-grid-head, .game-row, .table-totals{grid-template-columns:3.2rem 1fr 1fr; gap:.35rem;}
+    .game-row input[type=number]{padding:.35rem .2rem; font-size:.9rem;}
+  }
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>FC Ebnat-Kappel</h1>
-  <p>Jassturnier — Schieber</p>
-</div>
-<div class="wrap">
-  <div class="sync-status" id="syncStatus">Verbinde…</div>
 
-  <div class="card" id="setupCard">
-    <div class="section-title">Spieler erfassen</div>
-    <label for="playerNames">Namen (ein Name pro Zeile)</label>
-    <textarea id="playerNames" placeholder="Peter&#10;Hans&#10;Maria&#10;..."></textarea>
-    <div class="btn-row">
-      <button id="startBtn">Turnier starten</button>
-      <button class="secondary" id="resetBtn">Turnier zurücksetzen</button>
+<header>
+  <h1>Jassturnier Supporter FCEK</h1>
+  <p class="sub">Schieber &middot; Auslosung &middot; Rangliste</p>
+</header>
+
+<main id="organizer-view">
+
+  <div class="card" id="login-card">
+    <h2>Admin-Bereich</h2>
+    <p class="desc">Auslosung, Punktekontrolle und Rangliste sind nur für die Turnierleitung sichtbar. Bitte Passwort eingeben.</p>
+    <label for="login-password">Passwort</label>
+    <input type="text" id="login-password" placeholder="Passwort" autocomplete="off">
+    <div class="row">
+      <button class="btn gold" id="login-btn">Anmelden</button>
     </div>
-    <div class="msg error" id="setupMsg" style="display:none;"></div>
+    <div class="check-note check-bad hidden" id="login-error" style="margin-top:1rem;">Falsches Passwort.</div>
   </div>
 
-  <div class="card" id="tournamentCard" style="display:none;">
-    <div id="pausedInfo"></div>
-    <div id="tablesContainer"></div>
-    <div class="btn-row">
-      <button id="finishRoundBtn">Runde abschliessen</button>
-      <button class="secondary" id="resetBtn2">Turnier zurücksetzen</button>
+  <div id="admin-content" class="hidden">
+
+  <div class="card" id="setup-card">
+    <h2>1. Spieler erfassen</h2>
+    <p class="desc">Ein Name pro Zeile. Für eine faire Auslosung sollte die Anzahl durch 4 teilbar sein (4er-Tische, 2 gegen 2). Bei einem Rest von 1&ndash;3 Spielern pausieren diese abwechselnd pro Runde und erhalten den Rundendurchschnitt gutgeschrieben.</p>
+    <textarea id="players-input" placeholder="Peter Müller&#10;Anna Keller&#10;Hans Bruderer&#10;..."></textarea>
+    <div class="player-count" id="player-count">0 Spieler erfasst</div>
+    <div class="row">
+      <button class="btn gold" id="start-btn">Turnier starten &amp; Runde 1 auslosen</button>
+      <button class="btn ghost hidden" id="reset-btn">Turnier zurücksetzen</button>
     </div>
-    <div class="msg error" id="roundMsg" style="display:none;"></div>
   </div>
 
-  <div class="card" id="rankingCard" style="display:none;">
-    <div class="section-title" id="rankingTitle">Zwischenrangliste</div>
-    <div id="finalBanner"></div>
-    <table class="ranking" id="rankingTable">
-      <thead><tr><th>#</th><th>Spieler</th><th>Punkte total</th></tr></thead>
-      <tbody id="rankingBody"></tbody>
+  <div class="card hidden" id="qr-card">
+    <h2>QR-Codes pro Tisch</h2>
+    <p class="desc">Jeder Tisch scannt seinen eigenen Code und trägt dort seine Spielergebnisse ein &ndash; keine anderen Funktionen sichtbar.</p>
+    <div class="qr-grid" id="qr-grid"></div>
+  </div>
+
+  <div id="rounds-container"></div>
+
+  <div class="card hidden" id="rangliste-card">
+    <h2 id="rangliste-title">Zwischenrangliste</h2>
+    <p class="desc" id="rangliste-desc">Stand nach den abgeschlossenen Runden. Bei Punktegleichstand alphabetisch sortiert.</p>
+    <table class="rangliste">
+      <thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th></tr></thead>
+      <tbody id="rangliste-body"></tbody>
     </table>
   </div>
-</div>
+
+  </div>
+  <div class="sync-status" id="sync-status">Verbinde…</div>
+</main>
+
+<main id="table-view" class="hidden">
+  <div class="card" id="tv-card"></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script type="module">
-  import { app } from "./firebase-config.js";
-  import {
-    getDatabase, ref, onValue, set, get
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { app } from "./firebase-config.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  const db = getDatabase(app);
-  const stateRef = ref(db, "jassturnier/state");
-  const TARGET_TOTAL = 2512; // 2 x 1256
-  const TOTAL_ROUNDS = 3;
+const db = getDatabase(app);
+const stateRef = ref(db, "jassturnier/state");
 
-  let state = null; // aktueller lokaler Stand (kommt von Firebase)
-  let applyingRemote = false;
+const ROUNDS_TOTAL = 3;
+const GAMES_PER_TABLE = 8;
+const EXPECTED_TABLE_TOTAL = 1256; // Team A + Team B zusammen über 8 Spiele einer Runde
+const ADMIN_PASSWORD = '1969'; // hier bei Bedarf ändern
+let adminUnlocked = false;
+let applyingRemote = false;
 
-  onValue(stateRef, (snap) => {
-    applyingRemote = true;
-    state = snap.exists() ? snap.val() : null;
-    document.getElementById('syncStatus').textContent = 'Verbunden — live synchronisiert';
+let state = { players: [], rounds: [] };
+
+onValue(stateRef, (snap) => {
+  applyingRemote = true;
+  state = snap.exists() ? snap.val() : { players: [], rounds: [] };
+  normalizeState();
+  document.getElementById('sync-status').textContent = 'Verbunden — live synchronisiert';
+  boot();
+  applyingRemote = false;
+}, (err) => {
+  document.getElementById('sync-status').textContent = 'Verbindungsfehler: ' + err.message;
+});
+
+function emptyGames(){
+  return Array.from({length: GAMES_PER_TABLE}, () => ({ score1: null, score2: null }));
+}
+
+function normalizeState(){
+  if(!state.players) state.players = [];
+  if(!state.rounds) state.rounds = [];
+  state.rounds.forEach(r => {
+    if(!r.tables) r.tables = [];
+    if(!r.pause) r.pause = [];
+    r.tables.forEach(t => {
+      if(!t.games) t.games = emptyGames();
+      // Firebase speichert leere Arrays/Objekte nicht zuverlässig -> Länge absichern
+      if(t.games.length < GAMES_PER_TABLE){
+        while(t.games.length < GAMES_PER_TABLE) t.games.push({ score1: null, score2: null });
+      }
+      t.games.forEach(g => {
+        if(g.score1 === undefined) g.score1 = null;
+        if(g.score2 === undefined) g.score2 = null;
+      });
+    });
+  });
+}
+
+function save(){
+  if(applyingRemote) return;
+  set(stateRef, state);
+}
+
+function getTischParam(){
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('tisch');
+  const n = parseInt(raw, 10);
+  return (raw && !isNaN(n) && n >= 1) ? n : null;
+}
+
+function boot(){
+  const tisch = getTischParam();
+  if(tisch){
+    document.getElementById('organizer-view').classList.add('hidden');
+    document.getElementById('table-view').classList.remove('hidden');
+    renderTableView(tisch);
+    return;
+  }
+  document.getElementById('table-view').classList.add('hidden');
+  document.getElementById('organizer-view').classList.remove('hidden');
+  if(adminUnlocked){
+    document.getElementById('login-card').classList.add('hidden');
+    document.getElementById('admin-content').classList.remove('hidden');
     render();
-    applyingRemote = false;
-  }, (err) => {
-    document.getElementById('syncStatus').textContent = 'Verbindungsfehler: ' + err.message;
+  } else {
+    document.getElementById('login-card').classList.remove('hidden');
+    document.getElementById('admin-content').classList.add('hidden');
+  }
+}
+
+document.getElementById('login-btn').addEventListener('click', tryLogin);
+document.getElementById('login-password').addEventListener('keydown', e => { if(e.key === 'Enter') tryLogin(); });
+function tryLogin(){
+  const pwInput = document.getElementById('login-password');
+  const err = document.getElementById('login-error');
+  if(pwInput.value === ADMIN_PASSWORD){
+    adminUnlocked = true;
+    err.classList.add('hidden');
+    pwInput.value = '';
+    boot();
+  } else {
+    err.classList.remove('hidden');
+  }
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function drawRound(playerNames){
+  const shuffled = shuffle(playerNames);
+  const tables = [];
+  let i = 0;
+  while(i + 4 <= shuffled.length){
+    const four = shuffled.slice(i, i+4);
+    tables.push({ team1:[four[0],four[1]], team2:[four[2],four[3]], games: emptyGames() });
+    i += 4;
+  }
+  const rest = shuffled.slice(i);
+  return { tables, pause: rest, complete: false, pauseAvg: null };
+}
+
+function startTournament(){
+  const raw = document.getElementById('players-input').value;
+  const names = raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  const unique = [...new Set(names)];
+  if(unique.length < 4){ alert('Bitte mindestens 4 Spieler erfassen.'); return; }
+  state.players = unique;
+  state.rounds = [drawRound(unique)];
+  save();
+  render();
+}
+
+function tableTotals(t){
+  let sum1 = 0, sum2 = 0, filled = 0;
+  t.games.forEach(g => {
+    if(g.score1!==null && g.score1!=='' && !isNaN(g.score1) && g.score2!==null && g.score2!=='' && !isNaN(g.score2)){
+      sum1 += Number(g.score1);
+      sum2 += Number(g.score2);
+      filled++;
+    }
   });
+  return { sum1, sum2, total: sum1+sum2, filled };
+}
 
-  function saveState() {
-    if (applyingRemote) return;
-    set(stateRef, state);
-  }
-
-  function shuffle(arr) {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
-  function drawRound(players, pauseCounts) {
-    // Pausiert so viele Spieler wie nötig, damit der Rest durch 4 teilbar ist.
-    // Wer bisher am wenigsten pausiert hat, pausiert zuerst (fair über die Runden verteilt).
-    const n = players.length;
-    const activeCount = Math.floor(n / 4) * 4;
-    const pauseCount = n - activeCount;
-    let active = players.slice();
-    let paused = [];
-    if (pauseCount > 0) {
-      const sorted = shuffle(players).sort((a, b) => (pauseCounts[a.id] || 0) - (pauseCounts[b.id] || 0));
-      paused = sorted.slice(0, pauseCount);
-      const pausedIds = new Set(paused.map(p => p.id));
-      active = players.filter(p => !pausedIds.has(p.id));
-    }
-    const shuffled = shuffle(active);
-    const tables = [];
-    for (let i = 0; i < shuffled.length; i += 4) {
-      const group = shuffled.slice(i, i + 4);
-      const pairings = [
-        [[0,1],[2,3]],
-        [[0,2],[1,3]],
-        [[0,3],[1,2]]
-      ];
-      const pick = pairings[Math.floor(Math.random() * pairings.length)];
-      tables.push({
-        teamA: [group[pick[0][0]].id, group[pick[0][1]].id],
-        teamB: [group[pick[1][0]].id, group[pick[1][1]].id],
-        scoreA: null,
-        scoreB: null
-      });
-    }
-    return { tables, pausedIds: paused.map(p => p.id) };
-  }
-
-  function nameOf(id) {
-    const p = state.players.find(pl => pl.id === id);
-    return p ? p.name : '?';
-  }
-
-  function render() {
-    const setupCard = document.getElementById('setupCard');
-    const tournamentCard = document.getElementById('tournamentCard');
-    const rankingCard = document.getElementById('rankingCard');
-
-    if (!state || !state.started) {
-      setupCard.style.display = 'block';
-      tournamentCard.style.display = 'none';
-      rankingCard.style.display = 'none';
-      return;
-    }
-
-    setupCard.style.display = 'none';
-    tournamentCard.style.display = state.finished ? 'none' : 'block';
-    rankingCard.style.display = (state.completedRounds.length > 0) ? 'block' : 'none';
-
-    if (!state.finished) {
-      renderCurrentRound();
-    }
-    if (state.completedRounds.length > 0) {
-      renderRanking();
-    }
-  }
-
-  function renderCurrentRound() {
-    const round = state.currentRoundData;
-    const pausedInfo = document.getElementById('pausedInfo');
-    if (round.pausedIds && round.pausedIds.length > 0) {
-      pausedInfo.innerHTML = `<div class="paused-box">Pausiert in dieser Runde: <strong>${round.pausedIds.map(nameOf).join(', ')}</strong> (erhalten Rundendurchschnitt)</div>`;
+function totalsRowHtml(tt, isBad){
+  let html = '<span class="tt-label">Total (' + tt.filled + '/' + GAMES_PER_TABLE + ')</span>';
+  html += '<span class="tt-val">' + tt.sum1 + '</span>';
+  html += '<span class="tt-val">' + tt.sum2 + '</span>';
+  if(tt.filled === GAMES_PER_TABLE){
+    if(isBad){
+      html += '<div class="check-note check-bad">Kontrolle: ' + tt.total.toLocaleString('de-CH') + ' statt ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH') + ' Punkte über 8 Spiele &ndash; bitte korrigieren.</div>';
     } else {
-      pausedInfo.innerHTML = '';
+      html += '<div class="check-note check-ok">Kontrolle OK &middot; ' + tt.total.toLocaleString('de-CH') + ' Punkte über 8 Spiele.</div>';
     }
+  } else {
+    html += '<div class="check-note" style="background:#f1f0ea;color:var(--muted);border:1px solid var(--line);">Noch nicht alle 8 Spiele eingetragen.</div>';
+  }
+  return html;
+}
 
-    const container = document.getElementById('tablesContainer');
-    container.innerHTML = `<div class="round-label">Runde ${state.roundNumber} von ${TOTAL_ROUNDS}</div>`;
-    round.tables.forEach((t, idx) => {
-      const div = document.createElement('div');
-      div.className = 'table-card';
-      const sum = (t.scoreA !== null && t.scoreB !== null) ? (Number(t.scoreA) + Number(t.scoreB)) : null;
-      let controlHtml = '';
-      if (sum !== null) {
-        if (sum === TARGET_TOTAL) {
-          controlHtml = `<div class="control-line ok">✓ Kontrolle OK (${sum} Punkte)</div>`;
-        } else {
-          controlHtml = `<div class="control-line bad">✗ Kontrolle fehlgeschlagen: Summe ist ${sum}, erwartet ${TARGET_TOTAL}</div>`;
-        }
+function updateCheckNote(ridx, tidx){
+  const t = state.rounds[ridx].tables[tidx];
+  const tt = tableTotals(t);
+  const isBad = tt.filled === GAMES_PER_TABLE && tt.total !== EXPECTED_TABLE_TOTAL;
+  const slot = document.getElementById('tt-'+ridx+'-'+tidx);
+  if(slot) slot.innerHTML = totalsRowHtml(tt, isBad);
+}
+
+function finishRound(roundIdx){
+  const round = state.rounds[roundIdx];
+  for(const t of round.tables){
+    const tt = tableTotals(t);
+    if(tt.filled < GAMES_PER_TABLE){
+      alert('Bitte an allen Tischen alle ' + GAMES_PER_TABLE + ' Spiele eintragen, bevor die Runde abgeschlossen wird.');
+      return;
+    }
+    if(tt.total !== EXPECTED_TABLE_TOTAL){
+      alert('Kontrolle fehlgeschlagen: Die Punkte an einem Tisch ergeben über die ' + GAMES_PER_TABLE + ' Spiele zusammen nicht ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH') + '. Bitte prüfen und korrigieren.');
+      return;
+    }
+  }
+  round.complete = true;
+  if(round.pause.length > 0){
+    const allScores = [];
+    round.tables.forEach(t => { const tt = tableTotals(t); allScores.push(tt.sum1, tt.sum2); });
+    round.pauseAvg = allScores.length ? Math.round(allScores.reduce((a,b)=>a+b,0)/allScores.length) : 0;
+  }
+  if(roundIdx + 1 < ROUNDS_TOTAL){
+    state.rounds.push(drawRound(state.players.slice()));
+  }
+  save();
+  render();
+}
+
+function redrawRound(roundIdx){
+  if(!confirm('Diese Runde wirklich neu auslosen? Bereits eingetragene Punkte dieser Runde gehen verloren.')) return;
+  state.rounds[roundIdx] = drawRound(state.players.slice());
+  save();
+  render();
+}
+
+function resetTournament(){
+  if(!confirm('Turnier wirklich zurücksetzen? Alle Auslosungen und Punkte gehen verloren.')) return;
+  state = { players: [], rounds: [] };
+  document.getElementById('players-input').value = '';
+  save();
+  render();
+}
+
+function computeTotals(){
+  const totals = {};
+  state.players.forEach(p => { totals[p] = { rounds:[null,null,null], total:0 }; });
+  state.rounds.forEach((round, ridx) => {
+    if(!round.complete) return;
+    round.tables.forEach(t => {
+      const tt = tableTotals(t);
+      t.team1.forEach(p => { totals[p].rounds[ridx] = tt.sum1; });
+      t.team2.forEach(p => { totals[p].rounds[ridx] = tt.sum2; });
+    });
+    round.pause.forEach(p => { totals[p].rounds[ridx] = round.pauseAvg != null ? round.pauseAvg : 0; });
+  });
+  Object.keys(totals).forEach(p => {
+    totals[p].total = totals[p].rounds.reduce((sum,v)=> sum + (v==null?0:v), 0);
+  });
+  return totals;
+}
+
+function renderLeaderboard(){
+  const card = document.getElementById('rangliste-card');
+  const body = document.getElementById('rangliste-body');
+  const title = document.getElementById('rangliste-title');
+  const desc = document.getElementById('rangliste-desc');
+
+  const completedCount = state.rounds.filter(r=>r.complete).length;
+  if(completedCount === 0){ card.classList.add('hidden'); return; }
+  const allDone = state.rounds.length === ROUNDS_TOTAL && completedCount === ROUNDS_TOTAL;
+  title.textContent = allDone ? 'Schlussrangliste' : 'Zwischenrangliste (nach Runde ' + completedCount + ')';
+  desc.textContent = allDone
+    ? 'Total aus 3 Runden. Bei Punktegleichstand alphabetisch sortiert.'
+    : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand alphabetisch sortiert.';
+
+  const totals = computeTotals();
+  const list = Object.keys(totals).map(name => ({ name, ...totals[name] }));
+  list.sort((a,b) => b.total - a.total || a.name.localeCompare(b.name, 'de'));
+  body.innerHTML = '';
+  list.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    const rank = idx + 1;
+    if(rank===1) tr.className='rank1';
+    if(rank===2) tr.className='rank2';
+    if(rank===3) tr.className='rank3';
+    const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
+    tr.innerHTML = '<td class="rank-num">' + rank + '</td>' +
+      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + row.name + '</td>' +
+      '<td>' + (row.rounds[0]==null?'–':row.rounds[0]) + '</td>' +
+      '<td>' + (row.rounds[1]==null?'–':row.rounds[1]) + '</td>' +
+      '<td>' + (row.rounds[2]==null?'–':row.rounds[2]) + '</td>' +
+      '<td><strong>' + row.total + '</strong></td>';
+    body.appendChild(tr);
+  });
+  card.classList.remove('hidden');
+}
+
+function render(){
+  const setupCard = document.getElementById('setup-card');
+  const startBtn = document.getElementById('start-btn');
+  const resetBtn = document.getElementById('reset-btn');
+  const playersInput = document.getElementById('players-input');
+  const countEl = document.getElementById('player-count');
+  const roundsContainer = document.getElementById('rounds-container');
+
+  playersInput.oninput = function(){
+    const names = this.value.split('\n').map(s=>s.trim()).filter(Boolean);
+    countEl.textContent = names.length + ' Spieler erfasst' + (names.length % 4 !== 0 && names.length > 0 ? ' (Rest ' + (names.length % 4) + ' pausiert pro Runde)' : '');
+  };
+  startBtn.onclick = startTournament;
+  resetBtn.onclick = resetTournament;
+
+  if(state.rounds.length > 0){
+    setupCard.querySelector('h2').textContent = 'Spieler';
+    setupCard.querySelector('.desc').textContent = state.players.length + ' Spieler im Turnier.';
+    playersInput.classList.add('hidden');
+    startBtn.classList.add('hidden');
+    resetBtn.classList.remove('hidden');
+  } else {
+    setupCard.querySelector('h2').textContent = '1. Spieler erfassen';
+    setupCard.querySelector('.desc').textContent = 'Ein Name pro Zeile. Für eine faire Auslosung sollte die Anzahl durch 4 teilbar sein (4er-Tische, 2 gegen 2). Bei einem Rest von 1–3 Spielern pausieren diese abwechselnd pro Runde und erhalten den Rundendurchschnitt gutgeschrieben.';
+    playersInput.classList.remove('hidden');
+    startBtn.classList.remove('hidden');
+    resetBtn.classList.add('hidden');
+    countEl.textContent = state.players.length ? state.players.length + ' Spieler erfasst' : '0 Spieler erfasst';
+  }
+
+  roundsContainer.innerHTML = '';
+  state.rounds.forEach((round, ridx) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    let html = '<h2>Runde ' + (ridx+1) + '</h2>';
+    html += '<span class="round-label">' + (round.complete ? 'Abgeschlossen' : 'Läuft') + ' &middot; 8 Spiele</span>';
+    if(round.pause.length > 0){
+      html += '<div class="pause-note">Pausiert diese Runde: ' + round.pause.join(', ') + '</div>';
+    }
+    round.tables.forEach((t, tidx) => {
+      const tt = tableTotals(t);
+      const allFilled = tt.filled === GAMES_PER_TABLE;
+      const isBad = allFilled && tt.total !== EXPECTED_TABLE_TOTAL;
+      html += '<div class="table-block">';
+      html += '<div class="tnum">Tisch ' + (tidx+1) + '</div>';
+      html += '<div class="game-grid-head"><span></span><span>' + t.team1.join(' &amp; ') + '</span><span>' + t.team2.join(' &amp; ') + '</span></div>';
+      for(let g=0; g<GAMES_PER_TABLE; g++){
+        const game = t.games[g];
+        html += '<div class="game-row">';
+        html += '<span class="game-num">Spiel ' + (g+1) + '</span>';
+        html += '<input type="number" inputmode="numeric" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="1" value="'+(game.score1===null?'':game.score1)+'" placeholder="0">';
+        html += '<input type="number" inputmode="numeric" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="2" value="'+(game.score2===null?'':game.score2)+'" placeholder="0">';
+        html += '</div>';
       }
-      div.innerHTML = `
-        <h3>Tisch ${idx + 1}</h3>
-        <div class="team-row">
-          <div class="team-names"><strong>Team A:</strong> ${t.teamA.map(nameOf).join(' & ')}</div>
-          <input type="number" data-table="${idx}" data-team="A" value="${t.scoreA ?? ''}" placeholder="Punkte">
-        </div>
-        <div class="team-row">
-          <div class="team-names"><strong>Team B:</strong> ${t.teamB.map(nameOf).join(' & ')}</div>
-          <input type="number" data-table="${idx}" data-team="B" value="${t.scoreB ?? ''}" placeholder="Punkte">
-        </div>
-        ${controlHtml}
-      `;
-      container.appendChild(div);
+      html += '<div class="table-totals" id="tt-'+ridx+'-'+tidx+'">' + totalsRowHtml(tt, isBad) + '</div>';
+      html += '</div>';
     });
-
-    container.querySelectorAll('input[type="number"]').forEach(inp => {
-      inp.addEventListener('input', onScoreInput);
-    });
-
-    const allValid = round.tables.length > 0 && round.tables.every(t => t.scoreA !== null && t.scoreB !== null && (Number(t.scoreA) + Number(t.scoreB)) === TARGET_TOTAL);
-    document.getElementById('finishRoundBtn').disabled = !allValid;
-  }
-
-  function onScoreInput(e) {
-    const tableIdx = Number(e.target.dataset.table);
-    const team = e.target.dataset.team;
-    const val = e.target.value === '' ? null : Number(e.target.value);
-    if (team === 'A') state.currentRoundData.tables[tableIdx].scoreA = val;
-    else state.currentRoundData.tables[tableIdx].scoreB = val;
-    saveState();
-  }
-
-  function renderRanking() {
-    const totals = {};
-    state.players.forEach(p => totals[p.id] = 0);
-    state.completedRounds.forEach(r => {
-      let sumRound = 0;
-      let activeCount = 0;
-      r.tables.forEach(t => {
-        totals[t.teamA[0]] += t.scoreA; totals[t.teamA[1]] += t.scoreA;
-        totals[t.teamB[0]] += t.scoreB; totals[t.teamB[1]] += t.scoreB;
-        sumRound += t.scoreA + t.scoreB;
-        activeCount += 4;
-      });
-      const avg = activeCount > 0 ? sumRound / activeCount : 0;
-      (r.pausedIds || []).forEach(id => { totals[id] += avg; });
-    });
-
-    const ranked = state.players.slice().sort((a, b) => totals[b.id] - totals[a.id]);
-    const roundsDone = state.completedRounds.length;
-    const title = document.getElementById('rankingTitle');
-    const banner = document.getElementById('finalBanner');
-    if (roundsDone >= TOTAL_ROUNDS) {
-      title.textContent = 'Schlussrangliste';
-      banner.innerHTML = `<div class="final-banner"><div class="icon">🏆</div><p><strong>Turnier abgeschlossen!</strong></p></div>`;
+    html += '<div class="footer-actions">';
+    if(!round.complete){
+      html += '<button class="btn gold" data-finish="'+ridx+'">Runde ' + (ridx+1) + ' abschliessen' + (ridx+1 < ROUNDS_TOTAL ? ' &amp; nächste Runde auslosen' : ' &amp; Schlussrangliste erstellen') + '</button>';
+      html += '<button class="btn ghost" data-redraw="'+ridx+'">Diese Runde neu auslosen</button>';
     } else {
-      title.textContent = `Zwischenrangliste (nach Runde ${roundsDone})`;
-      banner.innerHTML = '';
+      html += '<span class="status-msg">Abgeschlossen &middot; Punkte können hier weiterhin korrigiert werden, Rangliste passt sich automatisch an.</span>';
     }
+    html += '</div>';
+    card.innerHTML = html;
+    roundsContainer.appendChild(card);
+  });
 
-    const body = document.getElementById('rankingBody');
-    body.innerHTML = '';
-    ranked.forEach((p, idx) => {
-      const tr = document.createElement('tr');
-      const rank = idx + 1;
-      if (roundsDone >= TOTAL_ROUNDS && rank <= 3) tr.className = 'final-' + rank;
-      let medal = '';
-      if (roundsDone >= TOTAL_ROUNDS) {
-        if (rank === 1) medal = '<span class="medal">🥇</span>';
-        else if (rank === 2) medal = '<span class="medal">🥈</span>';
-        else if (rank === 3) medal = '<span class="medal">🥉</span>';
-      }
-      tr.innerHTML = `<td>${rank}</td><td>${medal}${p.name}</td><td>${Math.round(totals[p.id] * 100) / 100}</td>`;
-      body.appendChild(tr);
+  roundsContainer.querySelectorAll('input[type=number]').forEach(inp => {
+    inp.addEventListener('input', function(){
+      const r = Number(this.dataset.round), t = Number(this.dataset.table), g = Number(this.dataset.game), team = this.dataset.team;
+      const val = this.value === '' ? null : Number(this.value);
+      if(team === '1') state.rounds[r].tables[t].games[g].score1 = val;
+      else state.rounds[r].tables[t].games[g].score2 = val;
+      save();
+      updateCheckNote(r, t);
+      renderLeaderboard();
     });
-  }
-
-  document.getElementById('startBtn').addEventListener('click', () => {
-    const raw = document.getElementById('playerNames').value;
-    const names = raw.split('\n').map(s => s.trim()).filter(s => s.length > 0);
-    const msg = document.getElementById('setupMsg');
-    if (names.length < 4) {
-      msg.textContent = 'Bitte mindestens 4 Spieler eintragen.';
-      msg.style.display = 'block';
-      return;
-    }
-    msg.style.display = 'none';
-
-    const players = names.map((name, i) => ({ id: 'p' + i + '_' + Date.now(), name }));
-    const pauseCounts = {};
-    const { tables, pausedIds } = drawRound(players, pauseCounts);
-
-    state = {
-      started: true,
-      finished: false,
-      players,
-      roundNumber: 1,
-      currentRoundData: { tables, pausedIds },
-      completedRounds: [],
-      pauseCounts
-    };
-    saveState();
+  });
+  roundsContainer.querySelectorAll('[data-finish]').forEach(btn => {
+    btn.addEventListener('click', function(){ finishRound(Number(this.dataset.finish)); });
+  });
+  roundsContainer.querySelectorAll('[data-redraw]').forEach(btn => {
+    btn.addEventListener('click', function(){ redrawRound(Number(this.dataset.redraw)); });
   });
 
-  document.getElementById('finishRoundBtn').addEventListener('click', () => {
-    const round = state.currentRoundData;
-    const allValid = round.tables.every(t => t.scoreA !== null && t.scoreB !== null && (Number(t.scoreA) + Number(t.scoreB)) === TARGET_TOTAL);
-    const roundMsg = document.getElementById('roundMsg');
-    if (!allValid) {
-      roundMsg.textContent = 'Nicht alle Tische haben eine korrekte Kontrollsumme (2\'512 Punkte).';
-      roundMsg.style.display = 'block';
-      return;
-    }
-    roundMsg.style.display = 'none';
+  renderLeaderboard();
+  renderQRCodes();
+}
 
-    // Pause-Zähler aktualisieren
-    const pauseCounts = state.pauseCounts || {};
-    (round.pausedIds || []).forEach(id => { pauseCounts[id] = (pauseCounts[id] || 0) + 1; });
-
-    state.completedRounds.push({ tables: round.tables, pausedIds: round.pausedIds });
-
-    if (state.roundNumber >= TOTAL_ROUNDS) {
-      state.finished = true;
-      state.pauseCounts = pauseCounts;
-      saveState();
-      return;
-    }
-
-    state.roundNumber += 1;
-    const { tables, pausedIds } = drawRound(state.players, pauseCounts);
-    state.currentRoundData = { tables, pausedIds };
-    state.pauseCounts = pauseCounts;
-    saveState();
-  });
-
-  function resetTournament() {
-    if (!confirm('Wirklich das ganze Turnier zurücksetzen? Alle Daten gehen verloren.')) return;
-    state = null;
-    set(stateRef, null);
+function baseUrlWithoutQuery(){
+  return window.location.origin + window.location.pathname;
+}
+function numTablesPerRound(){
+  return state.rounds.length ? state.rounds[state.rounds.length-1].tables.length : 0;
+}
+function renderQRCodes(){
+  const qrCard = document.getElementById('qr-card');
+  const qrGrid = document.getElementById('qr-grid');
+  const n = numTablesPerRound();
+  if(n === 0 || typeof QRCode === 'undefined'){ qrCard.classList.add('hidden'); return; }
+  qrCard.classList.remove('hidden');
+  qrGrid.innerHTML = '';
+  for(let i=1; i<=n; i++){
+    const url = baseUrlWithoutQuery() + '?tisch=' + i;
+    const item = document.createElement('div');
+    item.className = 'qr-item';
+    const wrap = document.createElement('div');
+    wrap.className = 'qr-canvas-wrap';
+    item.appendChild(wrap);
+    const label = document.createElement('div');
+    label.className = 'qr-label';
+    label.textContent = 'Tisch ' + i;
+    item.appendChild(label);
+    const urlEl = document.createElement('div');
+    urlEl.className = 'qr-url';
+    urlEl.textContent = url;
+    item.appendChild(urlEl);
+    qrGrid.appendChild(item);
+    try{ new QRCode(wrap, { text: url, width: 120, height: 120, colorDark: '#021639', colorLight: '#ffffff' }); }catch(e){}
   }
-  document.getElementById('resetBtn').addEventListener('click', resetTournament);
-  document.getElementById('resetBtn2').addEventListener('click', resetTournament);
+}
+
+// ---- Tisch-Ansicht: vereinfachte Seite für ein einzelnes Handy am Tisch ----
+function findActiveTableRound(tischNum){
+  for(let ridx = state.rounds.length - 1; ridx >= 0; ridx--){
+    const round = state.rounds[ridx];
+    if(!round.complete && round.tables.length >= tischNum) return { round, ridx };
+  }
+  return null;
+}
+
+function renderTableView(tischNum){
+  const card = document.getElementById('tv-card');
+  if(state.rounds.length === 0){
+    card.innerHTML = '<div class="tv-tischnum">Tisch ' + tischNum + '</div><div class="tv-waiting">Das Turnier hat noch nicht begonnen. Bitte kurz warten &ndash; diese Seite aktualisiert sich automatisch.</div>';
+    return;
+  }
+  const found = findActiveTableRound(tischNum);
+  if(!found){
+    const allDone = state.rounds.length === ROUNDS_TOTAL && state.rounds.every(r=>r.complete);
+    card.innerHTML = '<div class="tv-tischnum">Tisch ' + tischNum + '</div><div class="tv-waiting">' +
+      (allDone ? 'Das Turnier ist beendet. Vielen Dank fürs Mitspielen!' : 'Aktuell keine aktive Runde für diesen Tisch. Bitte kurz warten.') +
+      '</div>';
+    return;
+  }
+  const { round, ridx } = found;
+  const t = round.tables[tischNum - 1];
+  const tt = tableTotals(t);
+  const allFilled = tt.filled === GAMES_PER_TABLE;
+  const isBad = allFilled && tt.total !== EXPECTED_TABLE_TOTAL;
+
+  let html = '<div class="tv-tischnum">Tisch ' + tischNum + '</div>';
+  html += '<div class="tv-round">Runde ' + (ridx+1) + ' von ' + ROUNDS_TOTAL + '</div>';
+  html += '<div class="tv-teams"><div class="tv-team-name">' + t.team1.join(' &amp; ') + '</div><div class="tv-team-name">' + t.team2.join(' &amp; ') + '</div></div>';
+
+  for(let g=0; g<GAMES_PER_TABLE; g++){
+    const game = t.games[g];
+    html += '<div class="tv-game-row">';
+    html += '<span class="game-num">' + (g+1) + '</span>';
+    html += '<input type="number" inputmode="numeric" data-game="'+g+'" data-team="1" value="'+(game.score1===null?'':game.score1)+'" placeholder="0">';
+    html += '<input type="number" inputmode="numeric" data-game="'+g+'" data-team="2" value="'+(game.score2===null?'':game.score2)+'" placeholder="0">';
+    html += '</div>';
+  }
+
+  html += '<div class="tv-totals" id="tv-totals">' + totalsRowHtml(tt, isBad) + '</div>';
+  html += '<p class="status-msg" style="margin-top:.8rem;">Alle 8 Spiele eintragen, bis die Kontrolle grün wird. Danach der Turnierleitung Bescheid geben &ndash; sie schliesst die Runde ab.</p>';
+
+  card.innerHTML = html;
+
+  card.querySelectorAll('input[type=number]').forEach(inp => {
+    inp.addEventListener('input', function(){
+      const g = Number(this.dataset.game), team = this.dataset.team;
+      const val = this.value === '' ? null : Number(this.value);
+      if(team === '1') t.games[g].score1 = val;
+      else t.games[g].score2 = val;
+      save();
+      const tt2 = tableTotals(t);
+      const filled2 = tt2.filled === GAMES_PER_TABLE;
+      const bad2 = filled2 && tt2.total !== EXPECTED_TABLE_TOTAL;
+      const slot = document.getElementById('tv-totals');
+      if(slot) slot.innerHTML = totalsRowHtml(tt2, bad2);
+    });
+  });
+}
 </script>
+
 </body>
 </html>
