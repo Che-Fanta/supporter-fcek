@@ -1,13 +1,14 @@
-// Firebase-Konfiguration für das Jassturnier-Projekt (separate DB von supporter-fcek)
+// Firebase-Konfiguration für das Jassturnier-Projekt (separate DB von supporter-fcek / saisonkarten-tool)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCRWY2WCAPe9bMeGUwjdUr4FMxqYas84z8",
-  authDomain: "jassturnier-fcek.firebaseapp.com",
-  projectId: "jassturnier-fcek",
-  storageBucket: "jassturnier-fcek.firebasestorage.app",
-  messagingSenderId: "497328817562",
-  appId: "1:497328817562:web:24e031fe705e158e09e623"
+  apiKey: "AIzaSyAqTFAQTTguIf_ckUsKT927WtM64LIcfGI",
+  authDomain: "jassturnier-a1439.firebaseapp.com",
+  databaseURL: "https://jassturnier-a1439-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "jassturnier-a1439",
+  storageBucket: "jassturnier-a1439.firebasestorage.app",
+  messagingSenderId: "158099270271",
+  appId: "1:158099270271:web:24d4d32322522813ec6d4a"
 };
 
 export const app = initializeApp(firebaseConfig);

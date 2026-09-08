@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "jassturnier": {
+      "state": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "anmeldungen": {
+      ".read": false,
+      ".write": false
+    },
+    ".read": false,
+    ".write": false
+  }
+}
