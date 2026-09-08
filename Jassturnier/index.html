@@ -33,8 +33,12 @@
     padding:2.2rem 1.5rem 2.6rem;
     text-align:center;
   }
+  header .logo-wrap{
+    display:inline-block; background:#fff; border-radius:10px;
+    padding:.5rem .9rem .4rem; margin:0 0 1rem;
+  }
   header .logo{
-    height:64px; width:auto; margin:0 0 .8rem;
+    height:56px; width:auto; display:block;
   }
   header h1{
     font-family:Georgia,'Times New Roman',serif;
@@ -146,7 +150,7 @@
 <body>
 
 <header>
-  <img class="logo" src="logo.png" alt="Supporter FCEK">
+  <div class="logo-wrap"><img class="logo" src="logo.png" alt="Supporter FCEK"></div>
   <h1>Jassturnier Supporter FCEK</h1>
   <p class="sub">Schieber &middot; Auslosung &middot; Rangliste</p>
 </header>
