@@ -174,6 +174,14 @@
     </div>
   </div>
 
+  <div class="card">
+    <h2>Live-Rangliste (separate Seite)</h2>
+    <p class="desc">Eigene, schreibgeschützte Seite ohne Passwort &ndash; zum Aufrufen auf einem Beamer/Bildschirm oder zum Verschicken an die Spieler. Zeigt Zwischen-/Schlussrangliste pro Runde und Spieler, aktualisiert sich live.</p>
+    <div class="row">
+      <a class="btn gold" id="rangliste-link" href="?rangliste=1" target="_blank" rel="noopener">Live-Rangliste öffnen ↗</a>
+    </div>
+  </div>
+
   <div class="card" id="qr-card">
     <h2>QR-Codes pro Tisch</h2>
     <p class="desc">Können schon vor der Anmeldung/dem Turnierstart erzeugt und ausgedruckt werden &ndash; die Links (<code>?tisch=1</code>, <code>?tisch=2</code>, …) bleiben über das ganze Turnier gleich, unabhängig davon, wer später an welchem Tisch sitzt. Jeder Tisch scannt seinen eigenen Code und sieht dort nur seine eigenen Spielergebnisse.</p>
@@ -210,6 +218,14 @@
   <div class="card" id="tv-card"></div>
 </main>
 
+<main id="rangliste-view" class="hidden">
+  <div class="card">
+    <h2 id="rv-title">Rangliste</h2>
+    <p class="desc" id="rv-desc"></p>
+    <div id="rv-content"></div>
+  </div>
+</main>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script type="module">
@@ -227,10 +243,23 @@ let adminUnlocked = false;
 let applyingRemote = false;
 
 let state = { current: { players: [], rounds: [] }, history: [] };
+const unsavedTableKeys = new Set(); // "ridx-tidx" — Tische mit noch nicht gespeicherten Eingaben
 
 onValue(stateRef, (snap) => {
   applyingRemote = true;
-  state = snap.exists() ? snap.val() : { current: { players: [], rounds: [] }, history: [] };
+  const incoming = snap.exists() ? snap.val() : { current: { players: [], rounds: [] }, history: [] };
+  if(!incoming.current) incoming.current = { players: [], rounds: [] };
+  // Tische mit ungespeicherten lokalen Eingaben nicht durch entfernte Änderungen überschreiben
+  if(unsavedTableKeys.size > 0 && state.current && state.current.rounds){
+    unsavedTableKeys.forEach(key => {
+      const [r, t] = key.split('-').map(Number);
+      if(state.current.rounds[r] && state.current.rounds[r].tables[t] &&
+         incoming.current.rounds && incoming.current.rounds[r] && incoming.current.rounds[r].tables[t]){
+        incoming.current.rounds[r].tables[t] = state.current.rounds[r].tables[t];
+      }
+    });
+  }
+  state = incoming;
   normalizeState();
   document.getElementById('sync-status').textContent = 'Verbunden — live synchronisiert';
   boot();
@@ -238,6 +267,12 @@ onValue(stateRef, (snap) => {
 }, (err) => {
   document.getElementById('sync-status').textContent = 'Verbindungsfehler: ' + err.message;
 });
+
+function markUnsaved(r, t){
+  unsavedTableKeys.add(r + '-' + t);
+  const status = document.getElementById('save-status-'+r+'-'+t);
+  if(status){ status.textContent = 'Ungespeicherte Änderungen'; status.style.color = 'var(--red)'; }
+}
 
 function emptyGames(){
   return Array.from({length: GAMES_PER_TABLE}, () => ({ score1: null, score2: null }));
@@ -287,13 +322,23 @@ function getTischParam(){
 
 function boot(){
   const tisch = getTischParam();
+  const isRanglisteView = new URLSearchParams(window.location.search).has('rangliste');
   if(tisch){
     document.getElementById('organizer-view').classList.add('hidden');
+    document.getElementById('rangliste-view').classList.add('hidden');
     document.getElementById('table-view').classList.remove('hidden');
     renderTableView(tisch);
     return;
   }
+  if(isRanglisteView){
+    document.getElementById('organizer-view').classList.add('hidden');
+    document.getElementById('table-view').classList.add('hidden');
+    document.getElementById('rangliste-view').classList.remove('hidden');
+    renderRanglisteView();
+    return;
+  }
   document.getElementById('table-view').classList.add('hidden');
+  document.getElementById('rangliste-view').classList.add('hidden');
   document.getElementById('organizer-view').classList.remove('hidden');
   if(adminUnlocked){
     document.getElementById('login-card').classList.add('hidden');
@@ -426,6 +471,7 @@ function finishRound(roundIdx){
 function redrawRound(roundIdx){
   if(!confirm('Diese Runde wirklich neu auslosen? Bereits eingetragene Punkte dieser Runde gehen verloren.')) return;
   state.current.rounds[roundIdx] = drawRound(state.current.players.slice());
+  unsavedTableKeys.forEach(key => { if(key.startsWith(roundIdx+'-')) unsavedTableKeys.delete(key); });
   save();
   render();
 }
@@ -650,6 +696,10 @@ function render(){
         }
       }
       html += '<div class="table-totals" id="tt-'+ridx+'-'+tidx+'">' + totalsRowHtml(tt, isBad) + '</div>';
+      html += '<div class="row" style="margin-top:.8rem; align-items:center;">' +
+        '<button class="btn gold" data-save-table="'+ridx+'-'+tidx+'">Tisch '+(tidx+1)+' speichern</button>' +
+        '<span class="status-msg" id="save-status-'+ridx+'-'+tidx+'"></span>' +
+      '</div>';
       html += '</div>';
     });
     html += '<div class="footer-actions">';
@@ -670,9 +720,8 @@ function render(){
       const val = this.value === '' ? null : Number(this.value);
       if(team === '1') state.current.rounds[r].tables[t].games[g].score1 = val;
       else state.current.rounds[r].tables[t].games[g].score2 = val;
-      save();
       updateCheckNote(r, t);
-      renderLeaderboard();
+      markUnsaved(r, t);
     });
   });
   roundsContainer.querySelectorAll('input[data-total-round]').forEach(inp => {
@@ -681,9 +730,8 @@ function render(){
       const val = this.value === '' ? null : Number(this.value);
       if(team === '1') state.current.rounds[r].tables[t].totalScore1 = val;
       else state.current.rounds[r].tables[t].totalScore2 = val;
-      save();
       updateCheckNote(r, t);
-      renderLeaderboard();
+      markUnsaved(r, t);
     });
   });
   roundsContainer.querySelectorAll('[data-toggle-total]').forEach(cb => {
@@ -692,6 +740,16 @@ function render(){
       state.current.rounds[r].tables[t].totalMode = this.checked;
       save();
       render();
+    });
+  });
+  roundsContainer.querySelectorAll('[data-save-table]').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const key = this.dataset.saveTable;
+      unsavedTableKeys.delete(key);
+      save();
+      renderLeaderboard();
+      const status = document.getElementById('save-status-'+key);
+      if(status){ status.textContent = 'Gespeichert ✓'; status.style.color = 'var(--green)'; }
     });
   });
   roundsContainer.querySelectorAll('[data-finish]').forEach(btn => {
@@ -782,9 +840,12 @@ function renderTableView(tischNum){
   }
 
   html += '<div class="tv-totals" id="tv-totals">' + totalsRowHtml(tt, isBad) + '</div>';
-  html += '<p class="status-msg" style="margin-top:.8rem;">Alle 8 Spiele eintragen, bis die Kontrolle grün wird. Danach der Turnierleitung Bescheid geben &ndash; sie schliesst die Runde ab.</p>';
+  html += '<button class="btn gold" id="tv-save-btn" style="width:100%; margin-top:1rem; font-size:1.1rem; padding:.9rem;">Punkte speichern</button>';
+  html += '<p class="status-msg" id="tv-save-status" style="margin-top:.6rem; text-align:center; font-size:1rem;"></p>';
+  html += '<p class="status-msg" style="margin-top:.8rem;">Alle 8 Spiele eintragen, dann auf &laquo;Punkte speichern&raquo; drücken. Sobald die Kontrolle grün ist, der Turnierleitung Bescheid geben &ndash; sie schliesst die Runde ab.</p>';
 
   card.innerHTML = html;
+  const tvKey = ridx + '-' + (tischNum - 1);
 
   card.querySelectorAll('input[type=number]').forEach(inp => {
     inp.addEventListener('input', function(){
@@ -792,14 +853,49 @@ function renderTableView(tischNum){
       const val = this.value === '' ? null : Number(this.value);
       if(team === '1') t.games[g].score1 = val;
       else t.games[g].score2 = val;
-      save();
       const tt2 = tableTotals(t);
       const filled2 = tt2.filled === GAMES_PER_TABLE;
       const bad2 = filled2 && tt2.total !== EXPECTED_TABLE_TOTAL;
       const slot = document.getElementById('tv-totals');
       if(slot) slot.innerHTML = totalsRowHtml(tt2, bad2);
+      unsavedTableKeys.add(tvKey);
+      const status = document.getElementById('tv-save-status');
+      if(status){ status.textContent = 'Noch nicht gespeichert'; status.style.color = 'var(--red)'; }
     });
   });
+
+  document.getElementById('tv-save-btn').addEventListener('click', function(){
+    unsavedTableKeys.delete(tvKey);
+    save();
+    const status = document.getElementById('tv-save-status');
+    if(status){ status.textContent = 'Gespeichert ✓'; status.style.color = 'var(--green)'; }
+  });
+}
+
+// ---- Live-Rangliste: eigene, schreibgeschützte Ansicht (kein Passwort, z.B. für Beamer) ----
+function renderRanglisteView(){
+  const titleEl = document.getElementById('rv-title');
+  const descEl = document.getElementById('rv-desc');
+  const contentEl = document.getElementById('rv-content');
+  const tourn = state.current;
+
+  if(!tourn.players || tourn.players.length === 0){
+    titleEl.textContent = 'Rangliste';
+    descEl.textContent = '';
+    contentEl.innerHTML = '<p class="status-msg">Noch kein Turnier gestartet. Diese Seite aktualisiert sich automatisch, sobald es losgeht.</p>';
+    return;
+  }
+
+  const completedCount = tourn.rounds.filter(r=>r.complete).length;
+  const allDone = tourn.rounds.length === ROUNDS_TOTAL && completedCount === ROUNDS_TOTAL;
+  titleEl.textContent = allDone ? 'Schlussrangliste' : (completedCount > 0 ? 'Zwischenrangliste (nach Runde ' + completedCount + ')' : 'Rangliste');
+  descEl.textContent = completedCount === 0
+    ? 'Runde 1 läuft, noch keine Runde abgeschlossen.'
+    : (allDone ? 'Total aus 3 Runden. Bei Punktegleichstand alphabetisch sortiert.' : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand alphabetisch sortiert.');
+
+  contentEl.innerHTML = completedCount === 0
+    ? '<p class="status-msg">Sobald die erste Runde abgeschlossen ist, erscheint hier die Zwischenrangliste.</p>'
+    : rankingTableHtml(rankedList(tourn));
 }
 </script>
 
