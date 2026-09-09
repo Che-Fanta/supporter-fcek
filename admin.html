@@ -113,7 +113,6 @@
     <div class="topbar-right">
       <a href="Anmeldung_Supporter.html" target="_blank" class="btn btn-outline btn-sm link-btn">📋 Supporter-Anmeldung</a>
       <a href="event.html" target="_blank" class="btn btn-outline btn-sm link-btn">🎉 Event-Anmeldung</a>
-      <button class="btn btn-outline btn-sm" id="refreshAllBtn" onclick="refreshAllData()">🔄 Daten aktualisieren</button>
       <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
       <button class="btn btn-outline btn-sm" onclick="logout()">Abmelden</button>
     </div>
@@ -251,7 +250,7 @@
 
   function verifyAndEnter() {
     document.getElementById('loginMsg').className = 'msg';
-    return fetch(SCRIPT_URL + '?page=data&password=' + encodeURIComponent(adminPassword))
+    fetch(SCRIPT_URL + '?page=data&password=' + encodeURIComponent(adminPassword))
       .then(function(res) { return res.json(); })
       .then(function(result) {
         if (result.status !== 'success') {
@@ -282,17 +281,6 @@
   }
 
   function loadMembers() { verifyAndEnter(); }
-
-  function refreshAllData() {
-    var btn = document.getElementById('refreshAllBtn');
-    btn.disabled = true;
-    btn.textContent = '🔄 Lädt…';
-    verifyAndEnter().finally(function() {
-      btn.disabled = false;
-      btn.textContent = '🔄 Daten aktualisieren';
-      showMsg('Daten aktualisiert.', 'ok');
-    });
-  }
 
   // ---------- Tabs ----------
   function switchTab(tab) {
