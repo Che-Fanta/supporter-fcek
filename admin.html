@@ -178,6 +178,7 @@
         <button class="btn btn-outline btn-sm" onclick="exportEventsCsv()">CSV Export</button>
         <button class="btn btn-outline btn-sm" onclick="loadEventSignups()">Aktualisieren</button>
       </div>
+      <div id="essenStats" class="stats" style="margin-bottom:14px;"></div>
       <div id="eventTableWrap"><div class="loading">Wird geladen…</div></div>
     </div>
     </div>
@@ -259,6 +260,7 @@
         updateStats();
         renderTable();
         loadEventSignups();
+        loadEventsConfig();
       })
       .catch(function(err) {
         document.getElementById('loginMsg').textContent = 'Fehler: ' + err.message;
@@ -285,6 +287,17 @@
 
   // ---------- Event-Anmeldungen ----------
   var allEventSignups = [];
+  var allEventsConfig = [];
+
+  function loadEventsConfig() {
+    fetch(SCRIPT_URL + '?action=events')
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        allEventsConfig = (result && result.events) || [];
+        renderEventTable();
+      })
+      .catch(function() { /* Essenswahl-Kennzahl bleibt dann einfach ohne 0er-Optionen */ });
+  }
 
   function loadEventSignups() {
     document.getElementById('eventTableWrap').innerHTML = '<div class="loading">Wird geladen…</div>';
@@ -320,6 +333,32 @@
       essenOptions.map(function(n) { return '<option' + (n === currentEssen ? ' selected' : '') + '>' + escAttr(n) + '</option>'; }).join('');
   }
 
+  function renderEssenStats(filtered, selectedEventName) {
+    var wrap = document.getElementById('essenStats');
+
+    // Vollständige Essenswahl-Liste bestimmen: bei einem konkret gewählten Event
+    // (oder wenn nur ein Event in der aktuellen Auswahl vorkommt) aus der
+    // Event-Konfiguration, sonst nur die tatsächlich vorkommenden Werte (ohne 0er).
+    var eventNameForOptions = selectedEventName;
+    if (!eventNameForOptions) {
+      var distinctEvents = Array.from(new Set(filtered.map(function(s) { return s.event; }))).filter(Boolean);
+      if (distinctEvents.length === 1) eventNameForOptions = distinctEvents[0];
+    }
+    var evConfig = allEventsConfig.find(function(e) { return e.name === eventNameForOptions; });
+    var options = evConfig ? evConfig.essen.slice() : [];
+    filtered.forEach(function(s) { if (s.essen && options.indexOf(s.essen) === -1) options.push(s.essen); });
+
+    if (!options.length) { wrap.innerHTML = ''; return; }
+
+    var counts = {};
+    options.forEach(function(o) { counts[o] = 0; });
+    filtered.forEach(function(s) { if (s.essen) counts[s.essen] = (counts[s.essen] || 0) + 1; });
+
+    wrap.innerHTML = options.map(function(o) {
+      return '<div class="stat"><div class="val">' + counts[o] + '</div><div class="lbl">' + escAttr(o) + '</div></div>';
+    }).join('');
+  }
+
   function renderEventTable() {
     var q = document.getElementById('eventSearch').value.toLowerCase();
     var fe = document.getElementById('filterEventName').value;
@@ -332,6 +371,7 @@
     });
 
     document.getElementById('eventSignupCount').textContent = filtered.length;
+    renderEssenStats(filtered, fe);
 
     if (!filtered.length) {
       document.getElementById('eventTableWrap').innerHTML = '<p style="color:#888;padding:16px">Keine Anmeldungen gefunden.</p>';
