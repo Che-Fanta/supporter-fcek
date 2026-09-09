@@ -167,6 +167,14 @@
         <select id="filterEventName" onchange="renderEventTable()">
           <option value="">Alle Events</option>
         </select>
+        <select id="filterEssen" onchange="renderEventTable()">
+          <option value="">Alle Essenswahlen</option>
+        </select>
+        <select id="sortEvent" onchange="renderEventTable()">
+          <option value="neueste">Sortieren: Neueste zuerst</option>
+          <option value="essen">Sortieren: Essenswahl A-Z</option>
+          <option value="name">Sortieren: Name A-Z</option>
+        </select>
         <button class="btn btn-outline btn-sm" onclick="exportEventsCsv()">CSV Export</button>
         <button class="btn btn-outline btn-sm" onclick="loadEventSignups()">Aktualisieren</button>
       </div>
@@ -304,15 +312,23 @@
     var names = Array.from(new Set(allEventSignups.map(function(s) { return s.event; }))).filter(Boolean).sort();
     select.innerHTML = '<option value="">Alle Events</option>' +
       names.map(function(n) { return '<option' + (n === current ? ' selected' : '') + '>' + escAttr(n) + '</option>'; }).join('');
+
+    var essenSelect = document.getElementById('filterEssen');
+    var currentEssen = essenSelect.value;
+    var essenOptions = Array.from(new Set(allEventSignups.map(function(s) { return s.essen; }))).filter(Boolean).sort();
+    essenSelect.innerHTML = '<option value="">Alle Essenswahlen</option>' +
+      essenOptions.map(function(n) { return '<option' + (n === currentEssen ? ' selected' : '') + '>' + escAttr(n) + '</option>'; }).join('');
   }
 
   function renderEventTable() {
     var q = document.getElementById('eventSearch').value.toLowerCase();
     var fe = document.getElementById('filterEventName').value;
+    var fes = document.getElementById('filterEssen').value;
+    var sortBy = document.getElementById('sortEvent').value;
 
     var filtered = allEventSignups.filter(function(s) {
       var text = [s.vorname, s.nachname, s.event, s.essen].join(' ').toLowerCase();
-      return (!q || text.includes(q)) && (!fe || s.event === fe);
+      return (!q || text.includes(q)) && (!fe || s.event === fe) && (!fes || s.essen === fes);
     });
 
     document.getElementById('eventSignupCount').textContent = filtered.length;
@@ -322,8 +338,14 @@
       return;
     }
 
-    // Neueste zuerst
-    filtered = filtered.slice().reverse();
+    filtered = filtered.slice();
+    if (sortBy === 'essen') {
+      filtered.sort(function(a, b) { return (a.essen || '').localeCompare(b.essen || '') || (a.nachname || '').localeCompare(b.nachname || ''); });
+    } else if (sortBy === 'name') {
+      filtered.sort(function(a, b) { return (a.nachname || '').localeCompare(b.nachname || '') || (a.vorname || '').localeCompare(b.vorname || ''); });
+    } else {
+      filtered.reverse(); // Neueste zuerst
+    }
 
     var rows = filtered.map(function(s) {
       return '<tr>' +
