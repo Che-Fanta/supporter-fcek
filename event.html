@@ -100,6 +100,8 @@
   label { display: block; font-weight: 600; margin: 16px 0 6px; font-size: 0.92rem; }
   input[type="text"] { width: 100%; padding: 11px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
   input[type="text"]:focus { outline: none; border-color: var(--fcek-blue); }
+  textarea { width: 100%; padding: 11px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; font-family: inherit; resize: vertical; }
+  textarea:focus { outline: none; border-color: var(--fcek-blue); }
   .radio-option {
     display: flex; align-items: flex-start; gap: 10px; padding: 12px;
     border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px;
@@ -260,6 +262,9 @@
       html += `</div>`;
     }
 
+    html += `<label for="bemerkung">Bemerkung <span style="font-weight:400;color:#888;">(optional, max. 200 Zeichen)</span></label>
+      <textarea id="bemerkung" name="bemerkung" maxlength="200" rows="3"></textarea>`;
+
     html += `<button type="submit" id="submitBtn">Anmelden</button>
       <div class="status-msg" id="statusMsg"></div>
     </form></div>`;
@@ -290,6 +295,7 @@
     e.preventDefault();
     const vorname = document.getElementById('vorname').value.trim();
     const nachname = document.getElementById('nachname').value.trim();
+    const bemerkung = document.getElementById('bemerkung').value.trim().slice(0, 200);
     const essenInput = document.querySelector('input[name="essen"]:checked');
     const statusMsg = document.getElementById('statusMsg');
     const submitBtn = document.getElementById('submitBtn');
@@ -310,7 +316,8 @@
       eventId: selectedEvent.id,
       vorname: vorname,
       nachname: nachname,
-      essen: essenInput ? essenInput.value : ''
+      essen: essenInput ? essenInput.value : '',
+      bemerkung: bemerkung
     };
 
     fetch(SCRIPT_URL, {
