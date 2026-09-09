@@ -665,7 +665,7 @@ function funStatsHtml(tourn){
   const shutouts = computeShutoutWins(tourn);
   const highest = computeHighestRoundTotal(tourn);
   let html = '<div class="card" style="margin-top:1.4rem;"><h2>🎉 Fun-Rangliste</h2>';
-  html += '<p class="desc">Top 3 &ndash; meiste ' + GAME_POINTS_TOTAL + ':0-Siege (Spiel komplett dominiert)</p>';
+  html += '<h3 style="font-family:Georgia,serif; color:var(--navy); font-size:1.05rem; margin:0 0 .6rem;">Top 3 Anzahl Match (' + GAME_POINTS_TOTAL + ' Punkte)</h3>';
   if(!shutouts.length){
     html += '<p class="status-msg">Kein ' + GAME_POINTS_TOTAL + ':0-Ergebnis in diesem Turnier.</p>';
   } else {
@@ -677,7 +677,7 @@ function funStatsHtml(tourn){
     });
     html += '</tbody></table>';
   }
-  html += '<p class="desc" style="margin-top:1.2rem;">Höchstes Rundentotal eines Teams</p>';
+  html += '<h3 style="font-family:Georgia,serif; color:var(--navy); font-size:1.05rem; margin:1.2rem 0 .6rem;">Höchstes Rundentotal eines Teams</h3>';
   html += highest.players.length
     ? '<p class="status-msg" style="font-size:1rem;"><strong>' + highest.players.join(' &amp; ') + '</strong> mit <strong>' + highest.value + ' Punkten</strong> in Runde ' + (highest.round+1) + '</p>'
     : '<p class="status-msg">Noch keine Runde abgeschlossen.</p>';
@@ -813,19 +813,22 @@ function render(){
       '</div>';
       if(t.locked){
         html += '<div class="check-note" style="background:#eaf1fb;color:var(--navy);border:1px solid #cfe0f5;">Gesperrt &ndash; die Turnierleitung trägt die Punkte für diesen Tisch ein. Spieler können in ihrer Ansicht nichts mehr ändern.</div>';
+      } else {
+        html += '<div class="check-note" style="background:#f1f0ea;color:var(--muted);border:1px solid var(--line);">Punkte hier können erst bearbeitet werden, nachdem der Tisch oben gesperrt wurde &ndash; sonst tragen die Spieler ihre Ergebnisse selbst über ihre Tisch-Seite ein.</div>';
       }
       html += '<label style="display:flex; align-items:center; gap:.4rem; font-weight:600; margin:.6rem 0; cursor:pointer;">' +
         '<input type="checkbox" data-toggle-total="'+ridx+'-'+tidx+'" ' + (t.totalMode ? 'checked' : '') + ' style="width:auto;">' +
         'Nur Gesamtpunktzahl eintragen (statt 8 Einzelspiele)</label>';
+      const adminInputsDisabled = !t.locked;
       if(t.totalMode){
         const totalPairOk = t.totalScore1!==null && t.totalScore2!==null && Number(t.totalScore1)+Number(t.totalScore2)===EXPECTED_TABLE_TOTAL;
         html += '<div class="score-row" style="display:grid; grid-template-columns:1fr 8rem; gap:.8rem; align-items:center; padding:.4rem 0;">' +
           '<span>' + t.team1.join(' &amp; ') + '</span>' +
-          '<input type="number" inputmode="numeric" min="0" max="1256" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="1" value="'+(t.totalScore1===null?'':t.totalScore1)+'" placeholder="Total" style="text-align:center; font-weight:700;">' +
+          '<input type="number" inputmode="numeric" min="0" max="1256" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="1" value="'+(t.totalScore1===null?'':t.totalScore1)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+(adminInputsDisabled?' disabled':'')+'>' +
         '</div>';
         html += '<div class="score-row" style="display:grid; grid-template-columns:1fr 8rem; gap:.8rem; align-items:center; padding:.4rem 0;">' +
           '<span>' + t.team2.join(' &amp; ') + '</span>' +
-          '<input type="number" inputmode="numeric" min="0" max="1256" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="2" value="'+(t.totalScore2===null?'':t.totalScore2)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+(totalPairOk?' readonly':'')+'>' +
+          '<input type="number" inputmode="numeric" min="0" max="1256" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="2" value="'+(t.totalScore2===null?'':t.totalScore2)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+((totalPairOk||adminInputsDisabled)?' readonly':'')+(adminInputsDisabled?' disabled':'')+'>' +
         '</div>';
       } else {
         html += '<div class="game-grid-head"><span></span><span>' + t.team1.join(' &amp; ') + '</span><span>' + t.team2.join(' &amp; ') + '</span></div>';
@@ -834,14 +837,14 @@ function render(){
           html += '<div class="game-row">';
           html += '<span class="game-num">Spiel ' + (g+1) + '</span>';
           const gPairOk = game.score1!==null && game.score2!==null && Number(game.score1)+Number(game.score2)===GAME_POINTS_TOTAL;
-          html += '<input type="number" inputmode="numeric" min="0" max="157" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="1" value="'+(game.score1===null?'':game.score1)+'" placeholder="0">';
-          html += '<input type="number" inputmode="numeric" min="0" max="157" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="2" value="'+(game.score2===null?'':game.score2)+'" placeholder="0"'+(gPairOk?' readonly':'')+'>';
+          html += '<input type="number" inputmode="numeric" min="0" max="157" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="1" value="'+(game.score1===null?'':game.score1)+'" placeholder="0"'+(adminInputsDisabled?' disabled':'')+'>';
+          html += '<input type="number" inputmode="numeric" min="0" max="157" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="2" value="'+(game.score2===null?'':game.score2)+'" placeholder="0"'+((gPairOk||adminInputsDisabled)?' readonly':'')+(adminInputsDisabled?' disabled':'')+'>';
           html += '</div>';
         }
       }
       html += '<div class="table-totals" id="tt-'+ridx+'-'+tidx+'">' + totalsRowHtml(tt, isBad) + '</div>';
       html += '<div class="row" style="margin-top:.8rem; align-items:center;">' +
-        '<button class="btn gold" data-save-table="'+ridx+'-'+tidx+'">Tisch '+(tidx+1)+' speichern</button>' +
+        '<button class="btn gold" data-save-table="'+ridx+'-'+tidx+'"'+(adminInputsDisabled?' disabled':'')+'>Tisch '+(tidx+1)+' speichern</button>' +
         '<span class="status-msg" id="save-status-'+ridx+'-'+tidx+'"></span>' +
       '</div>';
       html += '</div>';
