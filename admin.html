@@ -28,8 +28,9 @@
   .btn-primary:hover { background: var(--fcek-blue-light); }
   .btn-sm { padding: 4px 10px; font-size: 0.8rem; }
   .btn-outline { background: #fff; border: 1px solid var(--border); color: #333; }
+  #tableWrap { max-height: 65vh; overflow: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th { background: #f0f2f5; padding: 9px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); white-space: nowrap; }
+  th { background: #f0f2f5; padding: 9px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
   td { padding: 5px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:hover td { background: #f9fafc; }
   tr.row-unpaid td { background: #fdecea; }
