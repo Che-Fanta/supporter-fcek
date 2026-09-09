@@ -248,23 +248,25 @@ function handleGamePairInput(changedInput, game, rowSelector){
   const changedTeam = changedInput.dataset.team;
   const otherTeam = changedTeam === '1' ? '2' : '1';
   const otherInput = row ? row.querySelector('input[data-team="'+otherTeam+'"]') : null;
-  const val = changedInput.value === '' ? null : Number(changedInput.value);
+  let val = changedInput.value === '' ? null : Number(changedInput.value);
 
-  if(val === null){
+  if(val === null || isNaN(val)){
     game.score1 = null; game.score2 = null;
     if(otherInput){ otherInput.value = ''; otherInput.readOnly = false; }
     changedInput.readOnly = false;
-  } else if(!isNaN(val) && val >= 0 && val <= GAME_POINTS_TOTAL){
-    const otherVal = GAME_POINTS_TOTAL - val;
-    if(changedTeam === '1'){ game.score1 = val; game.score2 = otherVal; }
-    else { game.score2 = val; game.score1 = otherVal; }
-    if(otherInput){ otherInput.value = otherVal; otherInput.readOnly = true; }
-    changedInput.readOnly = false;
-  } else {
-    // Ausserhalb 0-157: kein Autowert, damit Kontrolle unten den Fehler sichtbar macht
-    if(changedTeam === '1') game.score1 = val; else game.score2 = val;
-    if(otherInput) otherInput.readOnly = false;
+    return;
   }
+
+  // Auf 0-157 begrenzen, damit die 157-Punkte-Regel pro Spiel nie verletzt werden kann,
+  // egal was eingetippt wird.
+  val = Math.max(0, Math.min(GAME_POINTS_TOTAL, Math.round(val)));
+  if(Number(changedInput.value) !== val) changedInput.value = val;
+
+  const otherVal = GAME_POINTS_TOTAL - val;
+  if(changedTeam === '1'){ game.score1 = val; game.score2 = otherVal; }
+  else { game.score2 = val; game.score1 = otherVal; }
+  if(otherInput){ otherInput.value = otherVal; otherInput.readOnly = true; }
+  changedInput.readOnly = false;
 }
 const ADMIN_PASSWORD = '1969'; // hier bei Bedarf ändern
 let adminUnlocked = false;
