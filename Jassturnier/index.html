@@ -612,6 +612,79 @@ function rankingTableHtml(list){
   return html;
 }
 
+// Anonymisierte Variante der Rangliste (nur Rang + Punkte, keine Namen) -
+// für die Spannungsphase zwischen Runde 2 und Ende Runde 3.
+function anonRankingTableHtml(list){
+  let html = '<table class="rangliste"><thead><tr><th>Rang</th><th>Punkte</th></tr></thead><tbody>';
+  list.forEach((row, idx) => {
+    const rank = idx + 1;
+    const cls = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
+    html += '<tr class="'+cls+'"><td class="rank-num">' + rank + '</td><td><strong>' + row.total + '</strong></td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// Fun-Statistiken: meiste 157:0-Spiele (Top 3) und höchstes Rundentotal eines Teams.
+function computeShutoutWins(tourn){
+  const counts = {};
+  tourn.players.forEach(p => { counts[p] = 0; });
+  tourn.rounds.forEach(round => {
+    if(!round.complete) return;
+    round.tables.forEach(t => {
+      if(t.totalMode) return; // Einzelspiele nur bei per-Spiel-Eingabe auswertbar
+      t.games.forEach(g => {
+        if(g.score1 === GAME_POINTS_TOTAL && g.score2 === 0){ t.team1.forEach(p => { counts[p]++; }); }
+        else if(g.score2 === GAME_POINTS_TOTAL && g.score1 === 0){ t.team2.forEach(p => { counts[p]++; }); }
+      });
+    });
+  });
+  const list = Object.keys(counts).map(name => ({ name, count: counts[name] })).filter(r => r.count > 0);
+  list.sort((a,b) => b.count - a.count || a.name.localeCompare(b.name, 'de'));
+  return list.slice(0, 3);
+}
+
+function computeHighestRoundTotal(tourn){
+  const totals = computeTotals(tourn);
+  let best = -1;
+  Object.keys(totals).forEach(p => {
+    totals[p].rounds.forEach(v => { if(v!==null && v>best) best = v; });
+  });
+  if(best < 0) return { value: 0, round: null, players: [] };
+  let bestRound = null;
+  const players = [];
+  Object.keys(totals).forEach(p => {
+    totals[p].rounds.forEach((v, ridx) => {
+      if(v === best){ players.push(p); if(bestRound===null) bestRound = ridx; }
+    });
+  });
+  return { value: best, round: bestRound, players };
+}
+
+function funStatsHtml(tourn){
+  const shutouts = computeShutoutWins(tourn);
+  const highest = computeHighestRoundTotal(tourn);
+  let html = '<div class="card" style="margin-top:1.4rem;"><h2>🎉 Fun-Rangliste</h2>';
+  html += '<p class="desc">Top 3 &ndash; meiste ' + GAME_POINTS_TOTAL + ':0-Siege (Spiel komplett dominiert)</p>';
+  if(!shutouts.length){
+    html += '<p class="status-msg">Kein ' + GAME_POINTS_TOTAL + ':0-Ergebnis in diesem Turnier.</p>';
+  } else {
+    html += '<table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Anzahl</th></tr></thead><tbody>';
+    shutouts.forEach((row, idx) => {
+      const rank = idx + 1;
+      const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
+      html += '<tr><td class="rank-num">' + rank + '</td><td>' + (medal?'<span class="medal">'+medal+'</span>':'') + row.name + '</td><td><strong>' + row.count + '</strong></td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+  html += '<p class="desc" style="margin-top:1.2rem;">Höchstes Rundentotal eines Teams</p>';
+  html += highest.players.length
+    ? '<p class="status-msg" style="font-size:1rem;"><strong>' + highest.players.join(' &amp; ') + '</strong> mit <strong>' + highest.value + ' Punkten</strong> in Runde ' + (highest.round+1) + '</p>'
+    : '<p class="status-msg">Noch keine Runde abgeschlossen.</p>';
+  html += '</div>';
+  return html;
+}
+
 function renderLeaderboard(){
   const card = document.getElementById('rangliste-card');
   const body = document.getElementById('rangliste-body');
@@ -1003,14 +1076,24 @@ function renderRanglisteView(){
 
   const completedCount = tourn.rounds.filter(r=>r.complete).length;
   const allDone = tourn.rounds.length === ROUNDS_TOTAL && completedCount === ROUNDS_TOTAL;
-  titleEl.textContent = allDone ? 'Schlussrangliste' : (completedCount > 0 ? 'Zwischenrangliste (nach Runde ' + completedCount + ')' : 'Rangliste');
+  // Spannungsphase: nach Runde 1 werden Namen gezeigt, sobald nur noch die letzte
+  // Runde offen ist (hier: nach Runde 2) wird anonymisiert, bis alles fertig ist.
+  const anonymized = !allDone && completedCount === ROUNDS_TOTAL - 1;
+
+  titleEl.textContent = allDone ? 'Schlussrangliste' : (anonymized ? 'Zwischenstand (anonymisiert)' : (completedCount > 0 ? 'Zwischenrangliste (nach Runde ' + completedCount + ')' : 'Rangliste'));
   descEl.textContent = completedCount === 0
     ? 'Runde 1 läuft, noch keine Runde abgeschlossen.'
-    : (allDone ? 'Total aus 3 Runden. Bei Punktegleichstand alphabetisch sortiert.' : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand alphabetisch sortiert.');
+    : anonymized
+      ? 'Zur Spannung werden bis zur Schlussrangliste keine Namen mehr angezeigt – nur der aktuelle Punktestand pro Rang.'
+      : (allDone ? 'Total aus 3 Runden. Bei Punktegleichstand alphabetisch sortiert.' : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand alphabetisch sortiert.');
 
-  contentEl.innerHTML = completedCount === 0
-    ? '<p class="status-msg">Sobald die erste Runde abgeschlossen ist, erscheint hier die Zwischenrangliste.</p>'
-    : rankingTableHtml(rankedList(tourn));
+  if(completedCount === 0){
+    contentEl.innerHTML = '<p class="status-msg">Sobald die erste Runde abgeschlossen ist, erscheint hier die Zwischenrangliste.</p>';
+  } else if(anonymized){
+    contentEl.innerHTML = anonRankingTableHtml(rankedList(tourn));
+  } else {
+    contentEl.innerHTML = rankingTableHtml(rankedList(tourn)) + (allDone ? funStatsHtml(tourn) : '');
+  }
 }
 </script>
 
