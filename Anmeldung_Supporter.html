@@ -46,14 +46,14 @@
         <div class="typ-option selected" id="btnEinzel" onclick="setTyp('Einzel')">Einzelmitglied<br><small style="font-weight:400">200 CHF/Jahr</small></div>
         <div class="typ-option" id="btnPaar" onclick="setTyp('Paar')">Ehepaar / Paar<br><small style="font-weight:400">300 CHF/Jahr</small></div>
       </div>
-      <label for="firma">Firma <span style="font-weight:400;color:#888;">(optional)</span></label>
+      <label for="firma">Firmenname <span style="font-weight:400;color:#888;">(optional)</span></label>
       <input type="text" id="firma" autocomplete="organization">
       <div class="section-title">Person 1</div>
       <label for="vorname1">Vorname</label>
       <input type="text" id="vorname1" autocomplete="given-name">
       <label for="nachname1">Nachname</label>
       <input type="text" id="nachname1" autocomplete="family-name">
-      <label for="mobile1">Mobile <span style="font-weight:400;color:#888;">(optional)</span></label>
+      <label for="mobile1">Mobile</label>
       <input type="text" id="mobile1" autocomplete="tel" inputmode="tel">
       <label for="email">E-Mail</label>
       <input type="email" id="email" autocomplete="email">
@@ -63,7 +63,7 @@
         <input type="text" id="vorname2" autocomplete="given-name">
         <label for="nachname2">Nachname</label>
         <input type="text" id="nachname2" autocomplete="family-name">
-        <label for="mobile2">Mobile <span style="font-weight:400;color:#888;">(optional)</span></label>
+        <label for="mobile2">Mobile</label>
         <input type="text" id="mobile2" autocomplete="tel" inputmode="tel">
       </div>
       <div class="beitrag-info" id="beitragInfo">Jahresbeitrag: <strong>200 CHF</strong> (Einzelmitglied)</div>
@@ -105,11 +105,11 @@
     var nachname2 = document.getElementById('nachname2').value.trim();
     var mobile2 = document.getElementById('mobile2').value.trim();
 
-    if (!vorname1 || !nachname1 || !email) {
-      showError('Bitte Vorname, Nachname und E-Mail ausfüllen.'); return;
+    if (!vorname1 || !nachname1 || !mobile1 || !email) {
+      showError('Bitte Vorname, Nachname, Mobile und E-Mail ausfüllen.'); return;
     }
-    if (currentTyp === 'Paar' && (!vorname2 || !nachname2)) {
-      showError('Bitte auch Vor- und Nachname der zweiten Person ausfüllen.'); return;
+    if (currentTyp === 'Paar' && (!vorname2 || !nachname2 || !mobile2)) {
+      showError('Bitte auch Vorname, Nachname und Mobile der zweiten Person ausfüllen.'); return;
     }
 
     var btn = document.getElementById('submitBtn');
