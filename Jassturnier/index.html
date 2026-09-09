@@ -796,7 +796,27 @@ function render(){
   roundsContainer.querySelectorAll('[data-toggle-total]').forEach(cb => {
     cb.addEventListener('change', function(){
       const [r, t] = this.dataset.toggleTotal.split('-').map(Number);
-      state.current.rounds[r].tables[t].totalMode = this.checked;
+      const table = state.current.rounds[r].tables[t];
+      const goingToTotal = this.checked;
+
+      if(goingToTotal){
+        const hasGameData = table.games.some(g => g.score1!==null || g.score2!==null);
+        if(hasGameData && !confirm('Beim Wechsel zu "Nur Gesamtpunktzahl" gehen die bereits eingetragenen Einzelspiel-Ergebnisse verloren. Fortfahren?')){
+          this.checked = false;
+          return;
+        }
+        table.games = emptyGames();
+      } else {
+        const hasTotalData = table.totalScore1!==null || table.totalScore2!==null;
+        if(hasTotalData && !confirm('Beim Wechsel zu "8 Einzelspiele" geht das bereits eingetragene Gesamttotal verloren. Fortfahren?')){
+          this.checked = true;
+          return;
+        }
+        table.totalScore1 = null;
+        table.totalScore2 = null;
+      }
+
+      table.totalMode = goingToTotal;
       save();
       render();
     });
