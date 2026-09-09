@@ -164,7 +164,7 @@
       <h2>Event-Anmeldungen <span class="event-count-badge" id="eventSignupCount">0</span></h2>
       <div class="event-filter-bar">
         <input type="text" id="eventSearch" placeholder="Suchen…" oninput="renderEventTable()" style="flex:1;min-width:180px">
-        <select id="filterEventName" onchange="renderEventTable()">
+        <select id="filterEventName" onchange="renderEventTable()" style="font-weight:700; font-size:1rem; padding:8px 12px; border:2px solid var(--fcek-blue); color:var(--fcek-blue); background:#eef1f7; border-radius:8px;">
           <option value="">Alle Events</option>
         </select>
         <select id="filterEssen" onchange="renderEventTable()">
@@ -323,6 +323,9 @@
     var select = document.getElementById('filterEventName');
     var current = select.value;
     var names = Array.from(new Set(allEventSignups.map(function(s) { return s.event; }))).filter(Boolean).sort();
+    // Bei genau einem Event dieses direkt vorauswählen statt "Alle Events" -
+    // bei mehreren Events bleibt "Alle Events" der sichere Default.
+    if (!current && names.length === 1) current = names[0];
     select.innerHTML = '<option value="">Alle Events</option>' +
       names.map(function(n) { return '<option' + (n === current ? ' selected' : '') + '>' + escAttr(n) + '</option>'; }).join('');
 
