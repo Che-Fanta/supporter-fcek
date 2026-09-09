@@ -32,6 +32,10 @@
   th { background: #f0f2f5; padding: 9px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); white-space: nowrap; }
   td { padding: 5px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:hover td { background: #f9fafc; }
+  tr.row-unpaid td { background: #fdecea; }
+  tr.row-paid td { background: #e9f7ef; }
+  tr.row-unpaid:hover td { background: #fbdedb; }
+  tr.row-paid:hover td { background: #d9f0e3; }
   .cell-input { width: 100%; min-width: 90px; padding: 5px 6px; font-size: 0.83rem; border: 1px solid transparent; border-radius: 5px; background: transparent; }
   .cell-input:hover { border-color: var(--border); }
   .cell-input:focus { outline: none; border-color: var(--fcek-blue); background: #fff; }
@@ -381,7 +385,8 @@
     }
 
     var rows = filtered.map(function(m) {
-      return '<tr>' +
+      var rowClass = m.beitragBezahlt === 'Ja' ? 'row-paid' : (m.beitragBezahlt === 'Nein' ? 'row-unpaid' : '');
+      return '<tr class="' + rowClass + '" data-row="' + m.rowIndex + '">' +
         textCell(m.rowIndex, 'typ', m.typ, true) +
         textCell(m.rowIndex, 'firma', m.firma) +
         selectCell(m.rowIndex, 'restaurantCatering', m.restaurantCatering, ['Nein','Ja']) +
@@ -505,6 +510,10 @@
         var m = allMembers.find(function(x) { return x.rowIndex === rowIndex; });
         if (m) m[field] = value;
         updateStats();
+        if (field === 'beitragBezahlt') {
+          var tr = document.querySelector('tr[data-row="' + rowIndex + '"]');
+          if (tr) tr.className = value === 'Ja' ? 'row-paid' : (value === 'Nein' ? 'row-unpaid' : '');
+        }
         showMsg('Gespeichert.', 'ok');
       })
       .catch(function(err) { showMsg('Fehler beim Speichern: ' + err.message, 'err'); });
