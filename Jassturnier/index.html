@@ -268,6 +268,34 @@ function handleGamePairInput(changedInput, game, rowSelector){
   if(otherInput){ otherInput.value = otherVal; otherInput.readOnly = true; }
   changedInput.readOnly = false;
 }
+
+// Gleiches Prinzip wie handleGamePairInput, aber für den "Nur Gesamtpunktzahl"-Modus:
+// Gegenwert (1256 - Total) automatisch berechnen und sperren.
+function handleTotalPairInput(changedInput){
+  const r = Number(changedInput.dataset.totalRound), t = Number(changedInput.dataset.totalTable);
+  const team = changedInput.dataset.totalTeam;
+  const otherTeam = team === '1' ? '2' : '1';
+  const block = changedInput.closest('.table-block');
+  const otherInput = block ? block.querySelector('input[data-total-round="'+r+'"][data-total-table="'+t+'"][data-total-team="'+otherTeam+'"]') : null;
+  const table = state.current.rounds[r].tables[t];
+  let val = changedInput.value === '' ? null : Number(changedInput.value);
+
+  if(val === null || isNaN(val)){
+    table.totalScore1 = null; table.totalScore2 = null;
+    if(otherInput){ otherInput.value = ''; otherInput.readOnly = false; }
+    changedInput.readOnly = false;
+    return;
+  }
+
+  val = Math.max(0, Math.min(EXPECTED_TABLE_TOTAL, Math.round(val)));
+  if(Number(changedInput.value) !== val) changedInput.value = val;
+
+  const otherVal = EXPECTED_TABLE_TOTAL - val;
+  if(team === '1'){ table.totalScore1 = val; table.totalScore2 = otherVal; }
+  else { table.totalScore2 = val; table.totalScore1 = otherVal; }
+  if(otherInput){ otherInput.value = otherVal; otherInput.readOnly = true; }
+  changedInput.readOnly = false;
+}
 const ADMIN_PASSWORD = '1969'; // hier bei Bedarf ändern
 let adminUnlocked = false;
 let applyingRemote = false;
@@ -708,13 +736,14 @@ function render(){
         '<input type="checkbox" data-toggle-total="'+ridx+'-'+tidx+'" ' + (t.totalMode ? 'checked' : '') + ' style="width:auto;">' +
         'Nur Gesamtpunktzahl eintragen (statt 8 Einzelspiele)</label>';
       if(t.totalMode){
+        const totalPairOk = t.totalScore1!==null && t.totalScore2!==null && Number(t.totalScore1)+Number(t.totalScore2)===EXPECTED_TABLE_TOTAL;
         html += '<div class="score-row" style="display:grid; grid-template-columns:1fr 8rem; gap:.8rem; align-items:center; padding:.4rem 0;">' +
           '<span>' + t.team1.join(' &amp; ') + '</span>' +
-          '<input type="number" inputmode="numeric" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="1" value="'+(t.totalScore1===null?'':t.totalScore1)+'" placeholder="Total" style="text-align:center; font-weight:700;">' +
+          '<input type="number" inputmode="numeric" min="0" max="1256" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="1" value="'+(t.totalScore1===null?'':t.totalScore1)+'" placeholder="Total" style="text-align:center; font-weight:700;">' +
         '</div>';
         html += '<div class="score-row" style="display:grid; grid-template-columns:1fr 8rem; gap:.8rem; align-items:center; padding:.4rem 0;">' +
           '<span>' + t.team2.join(' &amp; ') + '</span>' +
-          '<input type="number" inputmode="numeric" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="2" value="'+(t.totalScore2===null?'':t.totalScore2)+'" placeholder="Total" style="text-align:center; font-weight:700;">' +
+          '<input type="number" inputmode="numeric" min="0" max="1256" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="2" value="'+(t.totalScore2===null?'':t.totalScore2)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+(totalPairOk?' readonly':'')+'>' +
         '</div>';
       } else {
         html += '<div class="game-grid-head"><span></span><span>' + t.team1.join(' &amp; ') + '</span><span>' + t.team2.join(' &amp; ') + '</span></div>';
@@ -758,10 +787,8 @@ function render(){
   });
   roundsContainer.querySelectorAll('input[data-total-round]').forEach(inp => {
     inp.addEventListener('input', function(){
-      const r = Number(this.dataset.totalRound), t = Number(this.dataset.totalTable), team = this.dataset.totalTeam;
-      const val = this.value === '' ? null : Number(this.value);
-      if(team === '1') state.current.rounds[r].tables[t].totalScore1 = val;
-      else state.current.rounds[r].tables[t].totalScore2 = val;
+      const r = Number(this.dataset.totalRound), t = Number(this.dataset.totalTable);
+      handleTotalPairInput(this);
       updateCheckNote(r, t);
       markUnsaved(r, t);
     });
