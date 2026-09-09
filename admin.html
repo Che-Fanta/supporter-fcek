@@ -395,16 +395,66 @@
       return '<tr>' +
         '<td>' + escAttr(s.timestamp) + '</td>' +
         '<td>' + escAttr(s.event) + '</td>' +
-        '<td>' + escAttr(s.vorname) + '</td>' +
-        '<td>' + escAttr(s.nachname) + '</td>' +
-        '<td>' + escAttr(s.essen) + '</td>' +
+        eventCell(s.rowIndex, 'vorname', s.vorname) +
+        eventCell(s.rowIndex, 'nachname', s.nachname) +
+        eventCell(s.rowIndex, 'essen', s.essen) +
+        '<td><button type="button" class="btn btn-outline btn-sm" style="color:var(--error);border-color:var(--error);" onclick="deleteEventSignup(' + s.rowIndex + ')">🗑 Löschen</button></td>' +
         '</tr>';
     }).join('');
 
     document.getElementById('eventTableWrap').innerHTML =
       '<table><thead><tr>' +
-      '<th>Zeitpunkt</th><th>Event</th><th>Vorname</th><th>Nachname</th><th>Essenswahl</th>' +
+      '<th>Zeitpunkt</th><th>Event</th><th>Vorname</th><th>Nachname</th><th>Essenswahl</th><th></th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  function eventCell(rowIndex, field, value) {
+    var v = (value === null || value === undefined) ? '' : value;
+    return '<td><input type="text" class="cell-input" value="' + escAttr(v) +
+      '" onchange="updateEventField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
+  }
+
+  function updateEventField(rowIndex, field, value) {
+    var payload = { formType: 'updateEventSignup', rowIndex: rowIndex, field: field, value: value, password: adminPassword };
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') {
+          showMsg(result.message || 'Fehler beim Speichern.', 'err');
+          return;
+        }
+        var s = allEventSignups.find(function(x) { return x.rowIndex === rowIndex; });
+        if (s) s[field] = value;
+        showMsg('Gespeichert.', 'ok');
+      })
+      .catch(function(err) { showMsg('Fehler beim Speichern: ' + err.message, 'err'); });
+  }
+
+  function deleteEventSignup(rowIndex) {
+    var s = allEventSignups.find(function(x) { return x.rowIndex === rowIndex; });
+    var who = s ? (s.vorname + ' ' + s.nachname) : 'diesen Eintrag';
+    if (!confirm('Anmeldung von "' + who + '" wirklich unwiderruflich löschen?')) return;
+
+    var payload = { formType: 'deleteEventSignup', rowIndex: rowIndex, password: adminPassword };
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') {
+          showMsg(result.message || 'Fehler beim Löschen.', 'err');
+          return;
+        }
+        showMsg('Gelöscht.', 'ok');
+        loadEventSignups();
+      })
+      .catch(function(err) { showMsg('Fehler beim Löschen: ' + err.message, 'err'); });
   }
 
   function exportEventsCsv() {
