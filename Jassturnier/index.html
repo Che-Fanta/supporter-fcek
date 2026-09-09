@@ -83,6 +83,7 @@
   .game-row{display:grid; grid-template-columns:5rem 1fr 1fr; gap:.5rem; align-items:center; padding:.25rem 0;}
   .game-row .game-num{font-size:.82rem; color:var(--muted);}
   .game-row input[type=number]{text-align:center; padding:.4rem .3rem;}
+  input[type=number][readonly]{background:#f1f0ea; color:var(--muted); cursor:not-allowed;}
   .table-totals{
     display:grid; grid-template-columns:5rem 1fr 1fr; gap:.5rem; align-items:center;
     margin-top:.4rem; padding-top:.5rem; border-top:2px solid var(--navy);
@@ -238,6 +239,33 @@ const stateRef = ref(db, "jassturnier/state");
 const ROUNDS_TOTAL = 3;
 const GAMES_PER_TABLE = 8;
 const EXPECTED_TABLE_TOTAL = 1256; // Team A + Team B zusammen über 8 Spiele einer Runde
+const GAME_POINTS_TOTAL = 157; // Team A + Team B zusammen pro einzelnem Spiel (157 x 8 = 1256)
+
+// Trägt bei Eingabe eines Team-Scores automatisch den Gegenwert (157 - Score) im anderen
+// Feld ein und sperrt es, damit die 157-Punkte-Regel pro Spiel nie verletzt werden kann.
+function handleGamePairInput(changedInput, game, rowSelector){
+  const row = changedInput.closest(rowSelector);
+  const changedTeam = changedInput.dataset.team;
+  const otherTeam = changedTeam === '1' ? '2' : '1';
+  const otherInput = row ? row.querySelector('input[data-team="'+otherTeam+'"]') : null;
+  const val = changedInput.value === '' ? null : Number(changedInput.value);
+
+  if(val === null){
+    game.score1 = null; game.score2 = null;
+    if(otherInput){ otherInput.value = ''; otherInput.readOnly = false; }
+    changedInput.readOnly = false;
+  } else if(!isNaN(val) && val >= 0 && val <= GAME_POINTS_TOTAL){
+    const otherVal = GAME_POINTS_TOTAL - val;
+    if(changedTeam === '1'){ game.score1 = val; game.score2 = otherVal; }
+    else { game.score2 = val; game.score1 = otherVal; }
+    if(otherInput){ otherInput.value = otherVal; otherInput.readOnly = true; }
+    changedInput.readOnly = false;
+  } else {
+    // Ausserhalb 0-157: kein Autowert, damit Kontrolle unten den Fehler sichtbar macht
+    if(changedTeam === '1') game.score1 = val; else game.score2 = val;
+    if(otherInput) otherInput.readOnly = false;
+  }
+}
 const ADMIN_PASSWORD = '1969'; // hier bei Bedarf ändern
 let adminUnlocked = false;
 let applyingRemote = false;
@@ -690,8 +718,9 @@ function render(){
           const game = t.games[g];
           html += '<div class="game-row">';
           html += '<span class="game-num">Spiel ' + (g+1) + '</span>';
-          html += '<input type="number" inputmode="numeric" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="1" value="'+(game.score1===null?'':game.score1)+'" placeholder="0">';
-          html += '<input type="number" inputmode="numeric" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="2" value="'+(game.score2===null?'':game.score2)+'" placeholder="0">';
+          const gPairOk = game.score1!==null && game.score2!==null && Number(game.score1)+Number(game.score2)===GAME_POINTS_TOTAL;
+          html += '<input type="number" inputmode="numeric" min="0" max="157" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="1" value="'+(game.score1===null?'':game.score1)+'" placeholder="0">';
+          html += '<input type="number" inputmode="numeric" min="0" max="157" data-round="'+ridx+'" data-table="'+tidx+'" data-game="'+g+'" data-team="2" value="'+(game.score2===null?'':game.score2)+'" placeholder="0"'+(gPairOk?' readonly':'')+'>';
           html += '</div>';
         }
       }
@@ -716,10 +745,9 @@ function render(){
 
   roundsContainer.querySelectorAll('input[data-round]').forEach(inp => {
     inp.addEventListener('input', function(){
-      const r = Number(this.dataset.round), t = Number(this.dataset.table), g = Number(this.dataset.game), team = this.dataset.team;
-      const val = this.value === '' ? null : Number(this.value);
-      if(team === '1') state.current.rounds[r].tables[t].games[g].score1 = val;
-      else state.current.rounds[r].tables[t].games[g].score2 = val;
+      const r = Number(this.dataset.round), t = Number(this.dataset.table), g = Number(this.dataset.game);
+      const game = state.current.rounds[r].tables[t].games[g];
+      handleGamePairInput(this, game, '.game-row');
       updateCheckNote(r, t);
       markUnsaved(r, t);
     });
@@ -834,8 +862,9 @@ function renderTableView(tischNum){
     const game = t.games[g];
     html += '<div class="tv-game-row">';
     html += '<span class="game-num">' + (g+1) + '</span>';
-    html += '<input type="number" inputmode="numeric" data-game="'+g+'" data-team="1" value="'+(game.score1===null?'':game.score1)+'" placeholder="0">';
-    html += '<input type="number" inputmode="numeric" data-game="'+g+'" data-team="2" value="'+(game.score2===null?'':game.score2)+'" placeholder="0">';
+    const gPairOk = game.score1!==null && game.score2!==null && Number(game.score1)+Number(game.score2)===GAME_POINTS_TOTAL;
+    html += '<input type="number" inputmode="numeric" min="0" max="157" data-game="'+g+'" data-team="1" value="'+(game.score1===null?'':game.score1)+'" placeholder="0">';
+    html += '<input type="number" inputmode="numeric" min="0" max="157" data-game="'+g+'" data-team="2" value="'+(game.score2===null?'':game.score2)+'" placeholder="0"'+(gPairOk?' readonly':'')+'>';
     html += '</div>';
   }
 
@@ -849,10 +878,9 @@ function renderTableView(tischNum){
 
   card.querySelectorAll('input[type=number]').forEach(inp => {
     inp.addEventListener('input', function(){
-      const g = Number(this.dataset.game), team = this.dataset.team;
-      const val = this.value === '' ? null : Number(this.value);
-      if(team === '1') t.games[g].score1 = val;
-      else t.games[g].score2 = val;
+      const g = Number(this.dataset.game);
+      const game = t.games[g];
+      handleGamePairInput(this, game, '.tv-game-row');
       const tt2 = tableTotals(t);
       const filled2 = tt2.filled === GAMES_PER_TABLE;
       const bad2 = filled2 && tt2.total !== EXPECTED_TABLE_TOTAL;
