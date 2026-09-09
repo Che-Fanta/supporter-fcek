@@ -46,11 +46,15 @@
         <div class="typ-option selected" id="btnEinzel" onclick="setTyp('Einzel')">Einzelmitglied<br><small style="font-weight:400">200 CHF/Jahr</small></div>
         <div class="typ-option" id="btnPaar" onclick="setTyp('Paar')">Ehepaar / Paar<br><small style="font-weight:400">300 CHF/Jahr</small></div>
       </div>
+      <label for="firma">Firma <span style="font-weight:400;color:#888;">(optional)</span></label>
+      <input type="text" id="firma" autocomplete="organization">
       <div class="section-title">Person 1</div>
       <label for="vorname1">Vorname</label>
       <input type="text" id="vorname1" autocomplete="given-name">
       <label for="nachname1">Nachname</label>
       <input type="text" id="nachname1" autocomplete="family-name">
+      <label for="mobile1">Mobile <span style="font-weight:400;color:#888;">(optional)</span></label>
+      <input type="text" id="mobile1" autocomplete="tel" inputmode="tel">
       <label for="email">E-Mail</label>
       <input type="email" id="email" autocomplete="email">
       <div class="paar-fields" id="paarFields">
@@ -59,6 +63,8 @@
         <input type="text" id="vorname2" autocomplete="given-name">
         <label for="nachname2">Nachname</label>
         <input type="text" id="nachname2" autocomplete="family-name">
+        <label for="mobile2">Mobile <span style="font-weight:400;color:#888;">(optional)</span></label>
+        <input type="text" id="mobile2" autocomplete="tel" inputmode="tel">
       </div>
       <div class="beitrag-info" id="beitragInfo">Jahresbeitrag: <strong>200 CHF</strong> (Einzelmitglied)</div>
       <button id="submitBtn" onclick="submitForm()">Jetzt anmelden</button>
@@ -90,11 +96,14 @@
     msg.style.display = 'none';
     msg.className = 'msg';
 
+    var firma = document.getElementById('firma').value.trim();
     var vorname1 = document.getElementById('vorname1').value.trim();
     var nachname1 = document.getElementById('nachname1').value.trim();
+    var mobile1 = document.getElementById('mobile1').value.trim();
     var email = document.getElementById('email').value.trim();
     var vorname2 = document.getElementById('vorname2').value.trim();
     var nachname2 = document.getElementById('nachname2').value.trim();
+    var mobile2 = document.getElementById('mobile2').value.trim();
 
     if (!vorname1 || !nachname1 || !email) {
       showError('Bitte Vorname, Nachname und E-Mail ausfüllen.'); return;
@@ -110,10 +119,13 @@
     var payload = {
       formType: 'member',
       typ: currentTyp,
+      firma: firma,
       vorname1: vorname1,
       nachname1: nachname1,
+      mobile1: mobile1,
       vorname2: vorname2,
       nachname2: nachname2,
+      mobile2: mobile2,
       email: email
     };
 

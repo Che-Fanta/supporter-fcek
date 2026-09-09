@@ -187,12 +187,17 @@
     <h3>Mitglied erfassen</h3>
     <label>Typ</label>
     <select id="mTyp" onchange="togglePaar2()"><option>Einzel</option><option>Paar</option></select>
+    <label>Firma (optional)</label><input type="text" id="mFirma">
+    <label>Restaurant/Catering</label>
+    <select id="mRestaurant"><option>Nein</option><option>Ja</option></select>
     <label>Vorname 1</label><input type="text" id="mVn1">
     <label>Nachname 1</label><input type="text" id="mNn1">
+    <label>Mobile 1 (optional)</label><input type="text" id="mMobil1">
     <label>E-Mail</label><input type="text" id="mEmail">
     <div id="mPaarDiv" style="display:none">
       <label>Vorname 2</label><input type="text" id="mVn2">
       <label>Nachname 2</label><input type="text" id="mNn2">
+      <label>Mobile 2 (optional)</label><input type="text" id="mMobil2">
     </div>
     <label>Status</label>
     <select id="mStatus" onchange="toggleAustritt()"><option>Neu</option><option>Aktiv</option><option>Inaktiv</option></select>
@@ -366,7 +371,7 @@
     var fb = document.getElementById('filterBezahlt').value;
 
     var filtered = allMembers.filter(function(m) {
-      var text = [m.vorname1, m.nachname1, m.vorname2, m.nachname2, m.email, m.bemerkung].join(' ').toLowerCase();
+      var text = [m.firma, m.vorname1, m.nachname1, m.mobile1, m.vorname2, m.nachname2, m.mobile2, m.email, m.bemerkung].join(' ').toLowerCase();
       return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb);
     });
 
@@ -378,10 +383,14 @@
     var rows = filtered.map(function(m) {
       return '<tr>' +
         textCell(m.rowIndex, 'typ', m.typ, true) +
+        textCell(m.rowIndex, 'firma', m.firma) +
+        selectCell(m.rowIndex, 'restaurantCatering', m.restaurantCatering, ['Nein','Ja']) +
         textCell(m.rowIndex, 'vorname1', m.vorname1) +
         textCell(m.rowIndex, 'nachname1', m.nachname1) +
+        textCell(m.rowIndex, 'mobile1', m.mobile1) +
         textCell(m.rowIndex, 'vorname2', m.vorname2) +
         textCell(m.rowIndex, 'nachname2', m.nachname2) +
+        textCell(m.rowIndex, 'mobile2', m.mobile2) +
         textCell(m.rowIndex, 'email', m.email, false, 'col-email') +
         statusCell(m.rowIndex, m.status) +
         selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja']) +
@@ -393,7 +402,8 @@
 
     document.getElementById('tableWrap').innerHTML =
       '<table><thead><tr>' +
-      '<th>Typ</th><th>Vorname 1</th><th>Nachname 1</th><th>Vorname 2</th><th>Nachname 2</th>' +
+      '<th>Typ</th><th>Firma</th><th>Rest./Catering</th><th>Vorname 1</th><th>Nachname 1</th><th>Mobile 1</th>' +
+      '<th>Vorname 2</th><th>Nachname 2</th><th>Mobile 2</th>' +
       '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
@@ -519,11 +529,15 @@
       formType: 'addMember',
       password: adminPassword,
       typ: document.getElementById('mTyp').value,
+      firma: document.getElementById('mFirma').value.trim(),
+      restaurantCatering: document.getElementById('mRestaurant').value,
       vorname1: document.getElementById('mVn1').value.trim(),
       nachname1: document.getElementById('mNn1').value.trim(),
+      mobile1: document.getElementById('mMobil1').value.trim(),
       email: document.getElementById('mEmail').value.trim(),
       vorname2: document.getElementById('mVn2').value.trim(),
       nachname2: document.getElementById('mNn2').value.trim(),
+      mobile2: document.getElementById('mMobil2').value.trim(),
       status: document.getElementById('mStatus').value,
       beitragBezahlt: document.getElementById('mBez').value,
       eintritt: document.getElementById('mEintritt').value.trim(),
@@ -550,9 +564,9 @@
   }
 
   function exportCsv() {
-    var rows = [['Typ','Vorname1','Nachname1','Vorname2','Nachname2','Email','Status','Beitrag bezahlt','Eintritt','Austritt','Bemerkung']];
+    var rows = [['Typ','Firma','Restaurant/Catering','Vorname1','Nachname1','Mobile 1','Vorname2','Nachname2','Mobile 2','Email','Status','Beitrag bezahlt','Eintritt','Austritt','Bemerkung']];
     allMembers.forEach(function(m) {
-      rows.push([m.typ, m.vorname1, m.nachname1, m.vorname2||'', m.nachname2||'', m.email, m.status, m.beitragBezahlt, m.eintritt||'', m.austritt||'', m.bemerkung||'']);
+      rows.push([m.typ, m.firma||'', m.restaurantCatering||'', m.vorname1, m.nachname1, m.mobile1||'', m.vorname2||'', m.nachname2||'', m.mobile2||'', m.email, m.status, m.beitragBezahlt, m.eintritt||'', m.austritt||'', m.bemerkung||'']);
     });
     var csv = rows.map(function(r) {
       return r.map(function(c) {
