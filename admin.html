@@ -113,7 +113,6 @@
     <div class="topbar-right">
       <a href="Anmeldung_Supporter.html" target="_blank" class="btn btn-outline btn-sm link-btn">📋 Supporter-Anmeldung</a>
       <a href="event.html" target="_blank" class="btn btn-outline btn-sm link-btn">🎉 Event-Anmeldung</a>
-      <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
       <button class="btn btn-outline btn-sm" onclick="logout()">Abmelden</button>
     </div>
   </div>
@@ -154,6 +153,7 @@
           <option value="Ja">Bezahlt</option><option value="Nein">Nicht bezahlt</option>
         </select>
         <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
+        <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
       </div>
       <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
     </div>
