@@ -472,16 +472,18 @@ function updateCheckNote(ridx, tidx){
 
 function finishRound(roundIdx){
   const round = state.current.rounds[roundIdx];
-  for(const t of round.tables){
+  const problems = [];
+  round.tables.forEach((t, tidx) => {
     const tt = tableTotals(t);
     if(tt.filled < GAMES_PER_TABLE){
-      alert('Bitte an allen Tischen alle ' + GAMES_PER_TABLE + ' Spiele eintragen, bevor die Runde abgeschlossen wird.');
-      return;
+      problems.push('Tisch ' + (tidx+1) + ': noch nicht alle ' + GAMES_PER_TABLE + ' Spiele eingetragen');
+    } else if(tt.total !== EXPECTED_TABLE_TOTAL){
+      problems.push('Tisch ' + (tidx+1) + ': ' + tt.total.toLocaleString('de-CH') + ' statt ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH') + ' Punkte');
     }
-    if(tt.total !== EXPECTED_TABLE_TOTAL){
-      alert('Kontrolle fehlgeschlagen: Die Punkte an einem Tisch ergeben über die ' + GAMES_PER_TABLE + ' Spiele zusammen nicht ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH') + '. Bitte prüfen und korrigieren.');
-      return;
-    }
+  });
+  if(problems.length > 0){
+    alert('Runde kann noch nicht abgeschlossen werden – folgende Tische stimmen noch nicht:\n\n' + problems.join('\n'));
+    return;
   }
   round.complete = true;
   if(round.pause.length > 0){
