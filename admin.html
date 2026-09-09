@@ -171,6 +171,11 @@
         <select id="filterEssen" onchange="renderEventTable()">
           <option value="">Alle Essenswahlen</option>
         </select>
+        <select id="filterEventStatus" onchange="renderEventTable()">
+          <option value="">Alle Status</option>
+          <option value="Angemeldet">Nur Angemeldet</option>
+          <option value="Abgemeldet">Nur Abgemeldet</option>
+        </select>
         <select id="sortEvent" onchange="renderEventTable()">
           <option value="neueste">Sortieren: Neueste zuerst</option>
           <option value="essen">Sortieren: Essenswahl A-Z</option>
@@ -367,15 +372,18 @@
     var q = document.getElementById('eventSearch').value.toLowerCase();
     var fe = document.getElementById('filterEventName').value;
     var fes = document.getElementById('filterEssen').value;
+    var fst = document.getElementById('filterEventStatus').value;
     var sortBy = document.getElementById('sortEvent').value;
 
     var filtered = allEventSignups.filter(function(s) {
       var text = [s.vorname, s.nachname, s.event, s.essen].join(' ').toLowerCase();
-      return (!q || text.includes(q)) && (!fe || s.event === fe) && (!fes || s.essen === fes);
+      return (!q || text.includes(q)) && (!fe || s.event === fe) && (!fes || s.essen === fes) && (!fst || (s.status || 'Angemeldet') === fst);
     });
 
-    document.getElementById('eventSignupCount').textContent = filtered.length;
-    renderEssenStats(filtered, fe);
+    // Statistik/Zähler berücksichtigen nur aktive (nicht abgemeldete) Anmeldungen.
+    var activeFiltered = filtered.filter(function(s) { return (s.status || 'Angemeldet') !== 'Abgemeldet'; });
+    document.getElementById('eventSignupCount').textContent = activeFiltered.length;
+    renderEssenStats(activeFiltered, fe);
 
     if (!filtered.length) {
       document.getElementById('eventTableWrap').innerHTML = '<p style="color:#888;padding:16px">Keine Anmeldungen gefunden.</p>';
@@ -392,19 +400,21 @@
     }
 
     var rows = filtered.map(function(s) {
-      return '<tr>' +
+      var rowClass = (s.status || 'Angemeldet') === 'Abgemeldet' ? 'row-unpaid' : '';
+      return '<tr class="' + rowClass + '">' +
         '<td>' + escAttr(s.timestamp) + '</td>' +
         '<td>' + escAttr(s.event) + '</td>' +
         eventCell(s.rowIndex, 'vorname', s.vorname) +
         eventCell(s.rowIndex, 'nachname', s.nachname) +
         eventCell(s.rowIndex, 'essen', s.essen) +
-        '<td><button type="button" class="btn btn-outline btn-sm" style="color:var(--error);border-color:var(--error);" onclick="deleteEventSignup(' + s.rowIndex + ')">🗑 Löschen</button></td>' +
+        eventStatusCell(s.rowIndex, s.status) +
+        bemerkungCell(s.rowIndex, s.bemerkung, 'event') +
         '</tr>';
     }).join('');
 
     document.getElementById('eventTableWrap').innerHTML =
       '<table><thead><tr>' +
-      '<th>Zeitpunkt</th><th>Event</th><th>Vorname</th><th>Nachname</th><th>Essenswahl</th><th></th>' +
+      '<th>Zeitpunkt</th><th>Event</th><th>Vorname</th><th>Nachname</th><th>Essenswahl</th><th>Status</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
@@ -412,6 +422,22 @@
     var v = (value === null || value === undefined) ? '' : value;
     return '<td><input type="text" class="cell-input" value="' + escAttr(v) +
       '" onchange="updateEventField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
+  }
+
+  function eventStatusCell(rowIndex, value) {
+    var options = ['Angemeldet', 'Abgemeldet'];
+    var current = value || 'Angemeldet';
+    var opts = options.map(function(o) {
+      return '<option' + (current === o ? ' selected' : '') + '>' + o + '</option>';
+    }).join('');
+    return '<td><select class="cell-input" onchange="onEventStatusChange(' + rowIndex + ',this.value)">' + opts + '</select></td>';
+  }
+
+  function onEventStatusChange(rowIndex, value) {
+    var s = allEventSignups.find(function(x) { return x.rowIndex === rowIndex; });
+    if (s) s.status = value;
+    updateEventField(rowIndex, 'status', value);
+    renderEventTable();
   }
 
   function updateEventField(rowIndex, field, value) {
@@ -434,33 +460,10 @@
       .catch(function(err) { showMsg('Fehler beim Speichern: ' + err.message, 'err'); });
   }
 
-  function deleteEventSignup(rowIndex) {
-    var s = allEventSignups.find(function(x) { return x.rowIndex === rowIndex; });
-    var who = s ? (s.vorname + ' ' + s.nachname) : 'diesen Eintrag';
-    if (!confirm('Anmeldung von "' + who + '" wirklich unwiderruflich löschen?')) return;
-
-    var payload = { formType: 'deleteEventSignup', rowIndex: rowIndex, password: adminPassword };
-    fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    })
-      .then(function(res) { return res.json(); })
-      .then(function(result) {
-        if (result.status !== 'success') {
-          showMsg(result.message || 'Fehler beim Löschen.', 'err');
-          return;
-        }
-        showMsg('Gelöscht.', 'ok');
-        loadEventSignups();
-      })
-      .catch(function(err) { showMsg('Fehler beim Löschen: ' + err.message, 'err'); });
-  }
-
   function exportEventsCsv() {
-    var rows = [['Timestamp','Event','Vorname','Nachname','Essenswahl']];
+    var rows = [['Timestamp','Event','Vorname','Nachname','Essenswahl','Status','Bemerkung']];
     allEventSignups.forEach(function(s) {
-      rows.push([s.timestamp, s.event, s.vorname, s.nachname, s.essen]);
+      rows.push([s.timestamp, s.event, s.vorname, s.nachname, s.essen, s.status || 'Angemeldet', s.bemerkung || '']);
     });
     var csv = rows.map(function(r) {
       return r.map(function(c) {
@@ -530,23 +533,34 @@
       '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  function bemerkungCell(rowIndex, value) {
+  function bemerkungCell(rowIndex, value, type) {
     var v = (value === null || value === undefined) ? '' : String(value);
     var hasText = v.trim().length > 0;
     var label = hasText ? (v.length > 20 ? v.slice(0, 20) + '…' : v) : '+ hinzufügen';
     var dot = hasText ? '<span class="bemerkung-dot"></span>' : '';
     var tooltip = hasText ? ' title="' + escAttr(v) + '"' : '';
     return '<td class="col-bemerkung"><button type="button" class="bemerkung-link' + (hasText ? '' : ' empty') +
-      '"' + tooltip + ' onclick="openBemerkungModal(' + rowIndex + ')">' + dot + escAttr(label) + '</button></td>';
+      '"' + tooltip + ' onclick="openBemerkungModal(' + rowIndex + ',\'' + (type || 'member') + '\')">' + dot + escAttr(label) + '</button></td>';
   }
 
-  function openBemerkungModal(rowIndex) {
-    var m = allMembers.find(function(x) { return x.rowIndex === rowIndex; });
-    if (!m) return;
-    document.getElementById('bemerkungModalTitle').textContent =
-      'Bemerkung — ' + (m.vorname1 || '') + ' ' + (m.nachname1 || '');
-    document.getElementById('bemerkungText').value = m.bemerkung || '';
+  function openBemerkungModal(rowIndex, type) {
+    type = type || 'member';
+    var title, text;
+    if (type === 'event') {
+      var s = allEventSignups.find(function(x) { return x.rowIndex === rowIndex; });
+      if (!s) return;
+      title = 'Bemerkung — ' + (s.vorname || '') + ' ' + (s.nachname || '');
+      text = s.bemerkung || '';
+    } else {
+      var m = allMembers.find(function(x) { return x.rowIndex === rowIndex; });
+      if (!m) return;
+      title = 'Bemerkung — ' + (m.vorname1 || '') + ' ' + (m.nachname1 || '');
+      text = m.bemerkung || '';
+    }
+    document.getElementById('bemerkungModalTitle').textContent = title;
+    document.getElementById('bemerkungText').value = text;
     document.getElementById('bemerkungModal').dataset.rowIndex = rowIndex;
+    document.getElementById('bemerkungModal').dataset.type = type;
     document.getElementById('bemerkungModal').classList.add('open');
     setTimeout(function() { document.getElementById('bemerkungText').focus(); }, 50);
   }
@@ -556,10 +570,17 @@
   }
 
   function saveBemerkungModal() {
-    var rowIndex = Number(document.getElementById('bemerkungModal').dataset.rowIndex);
+    var modal = document.getElementById('bemerkungModal');
+    var rowIndex = Number(modal.dataset.rowIndex);
+    var type = modal.dataset.type || 'member';
     var value = document.getElementById('bemerkungText').value;
-    updateField(rowIndex, 'bemerkung', value);
-    renderTable();
+    if (type === 'event') {
+      updateEventField(rowIndex, 'bemerkung', value);
+      renderEventTable();
+    } else {
+      updateField(rowIndex, 'bemerkung', value);
+      renderTable();
+    }
     closeBemerkungModal();
   }
 
