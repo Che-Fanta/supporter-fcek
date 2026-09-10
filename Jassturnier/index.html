@@ -237,9 +237,9 @@ const db = getDatabase(app);
 const stateRef = ref(db, "jassturnier/state");
 
 const ROUNDS_TOTAL = 3;
-const GAMES_PER_TABLE = 8;
-const EXPECTED_TABLE_TOTAL = 1256; // Team A + Team B zusammen über 8 Spiele einer Runde
-const GAME_POINTS_TOTAL = 157; // Team A + Team B zusammen pro einzelnem Spiel (157 x 8 = 1256)
+const GAMES_PER_TABLE = 10;
+const GAME_POINTS_TOTAL = 157; // Team A + Team B zusammen pro einzelnem Spiel
+const EXPECTED_TABLE_TOTAL = GAME_POINTS_TOTAL * GAMES_PER_TABLE; // Team A + Team B zusammen über alle Spiele einer Runde (157 x 10 = 1570)
 
 // Trägt bei Eingabe eines Team-Scores automatisch den Gegenwert (157 - Score) im anderen
 // Feld ein und sperrt es, damit die 157-Punkte-Regel pro Spiel nie verletzt werden kann.
@@ -270,7 +270,7 @@ function handleGamePairInput(changedInput, game, rowSelector){
 }
 
 // Gleiches Prinzip wie handleGamePairInput, aber für den "Nur Gesamtpunktzahl"-Modus:
-// Gegenwert (1256 - Total) automatisch berechnen und sperren.
+// Gegenwert (EXPECTED_TABLE_TOTAL - Total) automatisch berechnen und sperren.
 function handleTotalPairInput(changedInput){
   const r = Number(changedInput.dataset.totalRound), t = Number(changedInput.dataset.totalTable);
   const team = changedInput.dataset.totalTeam;
@@ -483,12 +483,12 @@ function totalsRowHtml(tt, isBad){
   html += '<span class="tt-val">' + tt.sum2 + '</span>';
   if(tt.filled === GAMES_PER_TABLE){
     if(isBad){
-      html += '<div class="check-note check-bad">Kontrolle: ' + tt.total.toLocaleString('de-CH') + ' statt ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH') + ' Punkte über 8 Spiele &ndash; bitte korrigieren.</div>';
+      html += '<div class="check-note check-bad">Kontrolle: ' + tt.total.toLocaleString('de-CH') + ' statt ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH') + ' Punkte über ' + GAMES_PER_TABLE + ' Spiele &ndash; bitte korrigieren.</div>';
     } else {
-      html += '<div class="check-note check-ok">Kontrolle OK &middot; ' + tt.total.toLocaleString('de-CH') + ' Punkte über 8 Spiele.</div>';
+      html += '<div class="check-note check-ok">Kontrolle OK &middot; ' + tt.total.toLocaleString('de-CH') + ' Punkte über ' + GAMES_PER_TABLE + ' Spiele.</div>';
     }
   } else {
-    html += '<div class="check-note" style="background:#f1f0ea;color:var(--muted);border:1px solid var(--line);">Noch nicht alle 8 Spiele eingetragen.</div>';
+    html += '<div class="check-note" style="background:#f1f0ea;color:var(--muted);border:1px solid var(--line);">Noch nicht alle ' + GAMES_PER_TABLE + ' Spiele eingetragen.</div>';
   }
   return html;
 }
@@ -796,7 +796,7 @@ function render(){
     const card = document.createElement('div');
     card.className = 'card';
     let html = '<h2>Runde ' + (ridx+1) + '</h2>';
-    html += '<span class="round-label">' + (round.complete ? 'Abgeschlossen' : 'Läuft') + ' &middot; 8 Spiele</span>';
+    html += '<span class="round-label">' + (round.complete ? 'Abgeschlossen' : 'Läuft') + ' &middot; ' + GAMES_PER_TABLE + ' Spiele</span>';
     if(round.pause.length > 0){
       html += '<div class="pause-note">Pausiert diese Runde: ' + round.pause.join(', ') + '</div>';
     }
@@ -818,17 +818,17 @@ function render(){
       }
       html += '<label style="display:flex; align-items:center; gap:.4rem; font-weight:600; margin:.6rem 0; cursor:pointer;">' +
         '<input type="checkbox" data-toggle-total="'+ridx+'-'+tidx+'" ' + (t.totalMode ? 'checked' : '') + ' style="width:auto;">' +
-        'Nur Gesamtpunktzahl eintragen (statt 8 Einzelspiele)</label>';
+        'Nur Gesamtpunktzahl eintragen (statt ' + GAMES_PER_TABLE + ' Einzelspiele)</label>';
       const adminInputsDisabled = !t.locked;
       if(t.totalMode){
         const totalPairOk = t.totalScore1!==null && t.totalScore2!==null && Number(t.totalScore1)+Number(t.totalScore2)===EXPECTED_TABLE_TOTAL;
         html += '<div class="score-row" style="display:grid; grid-template-columns:1fr 8rem; gap:.8rem; align-items:center; padding:.4rem 0;">' +
           '<span>' + t.team1.join(' &amp; ') + '</span>' +
-          '<input type="number" inputmode="numeric" min="0" max="1256" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="1" value="'+(t.totalScore1===null?'':t.totalScore1)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+(adminInputsDisabled?' disabled':'')+'>' +
+          '<input type="number" inputmode="numeric" min="0" max="'+EXPECTED_TABLE_TOTAL+'" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="1" value="'+(t.totalScore1===null?'':t.totalScore1)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+(adminInputsDisabled?' disabled':'')+'>' +
         '</div>';
         html += '<div class="score-row" style="display:grid; grid-template-columns:1fr 8rem; gap:.8rem; align-items:center; padding:.4rem 0;">' +
           '<span>' + t.team2.join(' &amp; ') + '</span>' +
-          '<input type="number" inputmode="numeric" min="0" max="1256" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="2" value="'+(t.totalScore2===null?'':t.totalScore2)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+((totalPairOk||adminInputsDisabled)?' readonly':'')+(adminInputsDisabled?' disabled':'')+'>' +
+          '<input type="number" inputmode="numeric" min="0" max="'+EXPECTED_TABLE_TOTAL+'" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="2" value="'+(t.totalScore2===null?'':t.totalScore2)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+((totalPairOk||adminInputsDisabled)?' readonly':'')+(adminInputsDisabled?' disabled':'')+'>' +
         '</div>';
       } else {
         html += '<div class="game-grid-head"><span></span><span>' + t.team1.join(' &amp; ') + '</span><span>' + t.team2.join(' &amp; ') + '</span></div>';
@@ -893,7 +893,7 @@ function render(){
         table.games = emptyGames();
       } else {
         const hasTotalData = table.totalScore1!==null || table.totalScore2!==null;
-        if(hasTotalData && !confirm('Beim Wechsel zu "8 Einzelspiele" geht das bereits eingetragene Gesamttotal verloren. Fortfahren?')){
+        if(hasTotalData && !confirm('Beim Wechsel zu "' + GAMES_PER_TABLE + ' Einzelspiele" geht das bereits eingetragene Gesamttotal verloren. Fortfahren?')){
           this.checked = true;
           return;
         }
@@ -1028,7 +1028,7 @@ function renderTableView(tischNum){
   } else {
     html += '<button class="btn gold" id="tv-save-btn" style="width:100%; margin-top:1rem; font-size:1.1rem; padding:.9rem;">Punkte speichern</button>';
     html += '<p class="status-msg" id="tv-save-status" style="margin-top:.6rem; text-align:center; font-size:1rem;"></p>';
-    html += '<p class="status-msg" style="margin-top:.8rem;">Alle 8 Spiele eintragen, dann auf &laquo;Punkte speichern&raquo; drücken. Sobald die Kontrolle grün ist, der Turnierleitung Bescheid geben &ndash; sie schliesst die Runde ab.</p>';
+    html += '<p class="status-msg" style="margin-top:.8rem;">Alle ' + GAMES_PER_TABLE + ' Spiele eintragen, dann auf &laquo;Punkte speichern&raquo; drücken. Sobald die Kontrolle grün ist, der Turnierleitung Bescheid geben &ndash; sie schliesst die Runde ab.</p>';
   }
 
   card.innerHTML = html;
