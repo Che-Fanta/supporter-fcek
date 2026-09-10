@@ -229,6 +229,8 @@
     let html = '';
     if (showBack) html += `<div class="back-link" id="backLink">← Anderes Event wählen</div>`;
 
+    const isClosed = ev.anmeldeschlussIso && new Date() > new Date(ev.anmeldeschlussIso);
+
     if (ev.programm && ev.programm.length) {
       html += `<div class="card"><div class="section-title"><span class="icon">🎯</span> Programm</div><ul class="program-list">`;
       ev.programm.forEach(p => { html += `<li><span class="dot">●</span> ${escapeHtml(p)}</li>`; });
@@ -241,8 +243,23 @@
         });
         html += `</div>`;
       }
-      if (ev.anmeldeschluss) html += `<div class="deadline">⏰ Anmeldeschluss: ${escapeHtml(ev.anmeldeschluss)}</div>`;
+      if (ev.anmeldeschluss) html += `<div class="deadline">⏰ Anmeldeschluss: ${escapeHtml(ev.anmeldeschluss)}${isClosed ? ' — abgelaufen' : ''}</div>`;
       html += `</div>`;
+    }
+
+    if (isClosed) {
+      html += `<div class="card"><p class="status-msg" style="font-size:1rem;text-align:center;">Der Anmeldeschluss für dieses Event ist bereits abgelaufen. Eine Anmeldung ist leider nicht mehr möglich.</p></div>`;
+      card.innerHTML = html;
+      card.style.display = 'block';
+      if (showBack) {
+        document.getElementById('backLink').addEventListener('click', () => {
+          card.style.display = 'none';
+          document.getElementById('headerTitle').textContent = 'Event-Anmeldung';
+          document.getElementById('headerSubtitle').textContent = 'Supporter FC Ebnat-Kappel';
+          renderPicker(allEvents);
+        });
+      }
+      return;
     }
 
     html += `<div class="card" id="formCard"><form id="eventForm">
