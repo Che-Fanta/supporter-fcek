@@ -44,7 +44,7 @@
       <label>Typ</label>
       <div class="typ-options">
         <div class="typ-option selected" id="btnEinzel" onclick="setTyp('Einzel')">Einzelmitglied<br><small style="font-weight:400">200 CHF/Jahr</small></div>
-        <div class="typ-option" id="btnPaar" onclick="setTyp('Paar')">Ehepaar / Paar<br><small style="font-weight:400">300 CHF/Jahr</small></div>
+        <div class="typ-option" id="btnPaar" onclick="setTyp('Paar')">Ehepaar / Konkubinatspaar<br><small style="font-weight:400">300 CHF/Jahr</small></div>
       </div>
       <label for="firma">Firmenname <span style="font-weight:400;color:#888;">(optional)</span></label>
       <input type="text" id="firma" autocomplete="organization">
@@ -87,7 +87,7 @@
     document.getElementById('btnPaar').classList.toggle('selected', typ === 'Paar');
     document.getElementById('paarFields').classList.toggle('visible', typ === 'Paar');
     document.getElementById('beitragInfo').innerHTML = typ === 'Paar'
-      ? 'Jahresbeitrag: <strong>300 CHF</strong> (Ehepaar / Paar)'
+      ? 'Jahresbeitrag: <strong>300 CHF</strong> (Ehepaar / Konkubinatspaar)'
       : 'Jahresbeitrag: <strong>200 CHF</strong> (Einzelmitglied)';
   }
 
