@@ -86,8 +86,6 @@
     background: var(--fcek-blue); color: #fff; font-size: 0.78rem;
     padding: 2px 9px; border-radius: 10px; font-weight: 600;
   }
-  .email-hint { font-size: 0.8rem; color: #666; margin: -6px 0 12px; }
-  .col-select { text-align: center; width: 34px; }
 
   @media(max-width:600px) { table { font-size: 0.78rem; } th, td { padding: 6px 4px; } }
 </style>
@@ -155,9 +153,8 @@
         </select>
         <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
         <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
-        <button class="btn btn-outline btn-sm" onclick="exportEmails()">📧 E-Mail Export</button>
+        <button class="btn btn-outline btn-sm" onclick="openEmailExportModal()">📧 E-Mail Export</button>
       </div>
-      <div class="email-hint">Hinweis: Beim E-Mail-Export werden nur <strong>aktive</strong> Mitglieder berücksichtigt, auch wenn inaktive/neue Mitglieder mit ausgewählt sind.</div>
       <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
     </div>
     </div>
@@ -234,6 +231,21 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveMember()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="emailExportModal">
+  <div class="modal">
+    <h3>E-Mail-Export</h3>
+    <p style="color:#666;font-size:0.88rem;margin-top:-8px">Welche Mitglieder sollen exportiert werden? Es werden dabei immer nur <strong>aktive</strong> Mitglieder berücksichtigt.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+      <button class="btn btn-primary" onclick="exportEmails('')">Alle Mitglieder</button>
+      <button class="btn btn-outline" onclick="exportEmails('Einzel')">Nur Einzel</button>
+      <button class="btn btn-outline" onclick="exportEmails('Paar')">Nur Paar</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeEmailExportModal()">Abbrechen</button>
     </div>
   </div>
 </div>
@@ -513,9 +525,7 @@
 
     var rows = filtered.map(function(m) {
       var rowClass = m.beitragBezahlt === 'Ja' ? 'row-paid' : (m.beitragBezahlt === 'Nein' ? 'row-unpaid' : '');
-      var checked = selectedRows.has(m.rowIndex) ? ' checked' : '';
       return '<tr class="' + rowClass + '" data-row="' + m.rowIndex + '">' +
-        '<td class="col-select"><input type="checkbox"' + checked + ' onchange="toggleRowSelect(' + m.rowIndex + ',this.checked)" title="Für E-Mail-Export auswählen"></td>' +
         textCell(m.rowIndex, 'typ', m.typ, true) +
         textCell(m.rowIndex, 'firma', m.firma) +
         selectCell(m.rowIndex, 'restaurantCatering', m.restaurantCatering, ['Nein','Ja']) +
@@ -534,57 +544,36 @@
         '</tr>';
     }).join('');
 
-    var allChecked = filtered.length > 0 && filtered.every(function(m) { return selectedRows.has(m.rowIndex); });
     document.getElementById('tableWrap').innerHTML =
       '<table><thead><tr>' +
-      '<th class="col-select"><input type="checkbox"' + (allChecked ? ' checked' : '') + ' onchange="toggleSelectAll(this.checked)" title="Alle sichtbaren Zeilen auswählen/abwählen"></th>' +
       '<th>Typ</th><th>Firma</th><th>Rest./Catering</th><th>Vorname 1</th><th>Nachname 1</th><th>Mobile 1</th>' +
       '<th>Vorname 2</th><th>Nachname 2</th><th>Mobile 2</th>' +
       '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
-  // ---------- Auswahl & E-Mail-Export ----------
-  var selectedRows = new Set();
+  // ---------- E-Mail-Export ----------
+  function openEmailExportModal() { document.getElementById('emailExportModal').classList.add('open'); }
+  function closeEmailExportModal() { document.getElementById('emailExportModal').classList.remove('open'); }
 
-  function toggleRowSelect(rowIndex, checked) {
-    if (checked) selectedRows.add(rowIndex); else selectedRows.delete(rowIndex);
-  }
-
-  function toggleSelectAll(checked) {
-    // Wirkt nur auf die aktuell sichtbaren (gefilterten) Zeilen, nicht auf ausgeblendete.
-    getFilteredMembers().forEach(function(m) {
-      if (checked) selectedRows.add(m.rowIndex); else selectedRows.delete(m.rowIndex);
-    });
-    renderTable();
-  }
-
-  function exportEmails() {
-    if (!selectedRows.size) { alert('Bitte zuerst ein oder mehrere Mitglieder über die Checkbox in der ersten Spalte auswählen.'); return; }
-
-    var selectedMembers = allMembers.filter(function(m) { return selectedRows.has(m.rowIndex); });
-    var activeSelected = selectedMembers.filter(function(m) { return m.status === 'Aktiv'; });
-    var skippedCount = selectedMembers.length - activeSelected.length;
+  function exportEmails(typ) {
+    var activeMembers = allMembers.filter(function(m) { return m.status === 'Aktiv' && (!typ || m.typ === typ); });
 
     var emails = [];
-    activeSelected.forEach(function(m) {
-      [m.email].forEach(function(e) {
-        e = (e || '').trim();
-        if (e && emails.indexOf(e) === -1) emails.push(e);
-      });
+    activeMembers.forEach(function(m) {
+      var e = (m.email || '').trim();
+      if (e && emails.indexOf(e) === -1) emails.push(e);
     });
 
+    closeEmailExportModal();
+
     if (!emails.length) {
-      alert('Keine E-Mail-Adressen aktiver Mitglieder in der Auswahl gefunden.');
+      alert('Keine E-Mail-Adressen aktiver Mitglieder gefunden.');
       return;
     }
 
     var text = emails.join('; ');
-    var finish = function() {
-      var msg = emails.length + ' E-Mail-Adresse(n) in die Zwischenablage kopiert (nur aktive Mitglieder).';
-      if (skippedCount > 0) msg += ' ' + skippedCount + ' ausgewählte(s) Mitglied(er) wurde(n) übersprungen, da nicht aktiv.';
-      showMsg(msg, 'ok');
-    };
+    var finish = function() { showMsg(emails.length + ' E-Mail-Adresse(n) in die Zwischenablage kopiert (nur aktive Mitglieder).', 'ok'); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(finish).catch(function() { prompt('E-Mail-Adressen manuell kopieren:', text); });
     } else {
