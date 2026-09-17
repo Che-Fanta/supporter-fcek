@@ -86,6 +86,8 @@
     background: var(--fcek-blue); color: #fff; font-size: 0.78rem;
     padding: 2px 9px; border-radius: 10px; font-weight: 600;
   }
+  .email-hint { font-size: 0.8rem; color: #666; margin: -6px 0 12px; }
+  .col-select { text-align: center; width: 34px; }
 
   @media(max-width:600px) { table { font-size: 0.78rem; } th, td { padding: 6px 4px; } }
 </style>
@@ -149,7 +151,9 @@
         </select>
         <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
         <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
+        <button class="btn btn-outline btn-sm" onclick="exportEmails()">📧 E-Mail Export</button>
       </div>
+      <div class="email-hint">Hinweis: Beim E-Mail-Export werden nur <strong>aktive</strong> Mitglieder berücksichtigt, auch wenn inaktive/neue Mitglieder mit ausgewählt sind.</div>
       <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
     </div>
     </div>
@@ -500,7 +504,9 @@
 
     var rows = filtered.map(function(m) {
       var rowClass = m.beitragBezahlt === 'Ja' ? 'row-paid' : (m.beitragBezahlt === 'Nein' ? 'row-unpaid' : '');
+      var checked = selectedRows.has(m.rowIndex) ? ' checked' : '';
       return '<tr class="' + rowClass + '" data-row="' + m.rowIndex + '">' +
+        '<td class="col-select"><input type="checkbox"' + checked + ' onchange="toggleRowSelect(' + m.rowIndex + ',this.checked)" title="Für E-Mail-Export auswählen"></td>' +
         textCell(m.rowIndex, 'typ', m.typ, true) +
         textCell(m.rowIndex, 'firma', m.firma) +
         selectCell(m.rowIndex, 'restaurantCatering', m.restaurantCatering, ['Nein','Ja']) +
@@ -519,12 +525,69 @@
         '</tr>';
     }).join('');
 
+    var allChecked = filtered.length > 0 && filtered.every(function(m) { return selectedRows.has(m.rowIndex); });
     document.getElementById('tableWrap').innerHTML =
       '<table><thead><tr>' +
+      '<th class="col-select"><input type="checkbox"' + (allChecked ? ' checked' : '') + ' onchange="toggleSelectAll(this.checked)" title="Alle sichtbaren Zeilen auswählen/abwählen"></th>' +
       '<th>Typ</th><th>Firma</th><th>Rest./Catering</th><th>Vorname 1</th><th>Nachname 1</th><th>Mobile 1</th>' +
       '<th>Vorname 2</th><th>Nachname 2</th><th>Mobile 2</th>' +
       '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
+  }
+
+  // ---------- Auswahl & E-Mail-Export ----------
+  var selectedRows = new Set();
+
+  function toggleRowSelect(rowIndex, checked) {
+    if (checked) selectedRows.add(rowIndex); else selectedRows.delete(rowIndex);
+  }
+
+  function toggleSelectAll(checked) {
+    // Wirkt nur auf die aktuell sichtbaren (gefilterten) Zeilen, nicht auf ausgeblendete.
+    var q = document.getElementById('search').value.toLowerCase();
+    var fs = document.getElementById('filterStatus').value;
+    var fb = document.getElementById('filterBezahlt').value;
+    allMembers.filter(function(m) {
+      var text = [m.firma, m.vorname1, m.nachname1, m.mobile1, m.vorname2, m.nachname2, m.mobile2, m.email, m.bemerkung].join(' ').toLowerCase();
+      return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb);
+    }).forEach(function(m) {
+      if (checked) selectedRows.add(m.rowIndex); else selectedRows.delete(m.rowIndex);
+    });
+    renderTable();
+  }
+
+  function exportEmails() {
+    if (!selectedRows.size) { alert('Bitte zuerst ein oder mehrere Mitglieder über die Checkbox in der ersten Spalte auswählen.'); return; }
+
+    var selectedMembers = allMembers.filter(function(m) { return selectedRows.has(m.rowIndex); });
+    var activeSelected = selectedMembers.filter(function(m) { return m.status === 'Aktiv'; });
+    var skippedCount = selectedMembers.length - activeSelected.length;
+
+    var emails = [];
+    activeSelected.forEach(function(m) {
+      [m.email].forEach(function(e) {
+        e = (e || '').trim();
+        if (e && emails.indexOf(e) === -1) emails.push(e);
+      });
+    });
+
+    if (!emails.length) {
+      alert('Keine E-Mail-Adressen aktiver Mitglieder in der Auswahl gefunden.');
+      return;
+    }
+
+    var text = emails.join('; ');
+    var finish = function() {
+      var msg = emails.length + ' E-Mail-Adresse(n) in die Zwischenablage kopiert (nur aktive Mitglieder).';
+      if (skippedCount > 0) msg += ' ' + skippedCount + ' ausgewählte(s) Mitglied(er) wurde(n) übersprungen, da nicht aktiv.';
+      showMsg(msg, 'ok');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(finish).catch(function() { prompt('E-Mail-Adressen manuell kopieren:', text); });
+    } else {
+      prompt('E-Mail-Adressen manuell kopieren:', text);
+      finish();
+    }
   }
 
   function bemerkungCell(rowIndex, value, type) {
@@ -580,8 +643,9 @@
 
   function monthCell(rowIndex, field, value, disabled) {
     var v = (value === null || value === undefined) ? '' : value;
+    var tooltip = disabled ? 'Nur editierbar wenn Status = Inaktiv' : v;
     return '<td class="col-eintritt"><input type="month" id="austritt-' + rowIndex + '" class="cell-input" value="' + escAttr(v) +
-      '"' + (disabled ? ' disabled title="Nur editierbar wenn Status = Inaktiv"' : '') +
+      '" title="' + escAttr(tooltip) + '"' + (disabled ? ' disabled' : '') +
       ' onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
   }
 
@@ -589,7 +653,7 @@
     if (isTyp) return selectCell(rowIndex, field, value, ['Einzel','Paar']);
     var v = (value === null || value === undefined) ? '' : value;
     return '<td class="' + (extraClass||'') + '"><input type="text" class="cell-input" value="' + escAttr(v) +
-      '" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
+      '" title="' + escAttr(v) + '" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
   }
 
   function selectCell(rowIndex, field, value, options) {
@@ -614,7 +678,7 @@
     if (austrittInput) {
       if (newVal === 'Inaktiv') {
         austrittInput.disabled = false;
-        austrittInput.title = '';
+        austrittInput.title = austrittInput.value;
         austrittInput.focus();
       } else {
         austrittInput.disabled = true;
