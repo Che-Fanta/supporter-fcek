@@ -149,9 +149,19 @@
           <option value="">Beitrag alle</option>
           <option value="Ja">Bezahlt</option><option value="Nein">Nicht bezahlt</option>
         </select>
+        <select id="filterTyp" onchange="renderTable()">
+          <option value="">Alle Typen</option>
+          <option value="Einzel">Nur Einzel</option><option value="Paar">Nur Paar</option>
+        </select>
         <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
         <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
         <button class="btn btn-outline btn-sm" onclick="exportEmails()">📧 E-Mail Export</button>
+      </div>
+      <div class="toolbar" style="margin-top:-6px">
+        <span style="font-size:0.8rem;color:#666;align-self:center;">Schnellauswahl für E-Mail-Export:</span>
+        <button class="btn btn-outline btn-sm" onclick="quickSelectTyp('Einzel')">Alle Einzel auswählen</button>
+        <button class="btn btn-outline btn-sm" onclick="quickSelectTyp('Paar')">Alle Paar auswählen</button>
+        <button class="btn btn-outline btn-sm" onclick="clearSelection()">Auswahl leeren</button>
       </div>
       <div class="email-hint">Hinweis: Beim E-Mail-Export werden nur <strong>aktive</strong> Mitglieder berücksichtigt, auch wenn inaktive/neue Mitglieder mit ausgewählt sind.</div>
       <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
@@ -487,15 +497,20 @@
     document.getElementById('statBezahlt').textContent = allMembers.filter(function(m) { return m.beitragBezahlt === 'Ja'; }).length;
   }
 
-  function renderTable() {
+  function getFilteredMembers() {
     var q = document.getElementById('search').value.toLowerCase();
     var fs = document.getElementById('filterStatus').value;
     var fb = document.getElementById('filterBezahlt').value;
+    var ft = document.getElementById('filterTyp').value;
 
-    var filtered = allMembers.filter(function(m) {
+    return allMembers.filter(function(m) {
       var text = [m.firma, m.vorname1, m.nachname1, m.mobile1, m.vorname2, m.nachname2, m.mobile2, m.email, m.bemerkung].join(' ').toLowerCase();
-      return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb);
+      return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb) && (!ft || m.typ === ft);
     });
+  }
+
+  function renderTable() {
+    var filtered = getFilteredMembers();
 
     if (!filtered.length) {
       document.getElementById('tableWrap').innerHTML = '<p style="color:#888;padding:16px">Keine Einträge gefunden.</p>';
@@ -544,15 +559,27 @@
 
   function toggleSelectAll(checked) {
     // Wirkt nur auf die aktuell sichtbaren (gefilterten) Zeilen, nicht auf ausgeblendete.
-    var q = document.getElementById('search').value.toLowerCase();
-    var fs = document.getElementById('filterStatus').value;
-    var fb = document.getElementById('filterBezahlt').value;
-    allMembers.filter(function(m) {
-      var text = [m.firma, m.vorname1, m.nachname1, m.mobile1, m.vorname2, m.nachname2, m.mobile2, m.email, m.bemerkung].join(' ').toLowerCase();
-      return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb);
-    }).forEach(function(m) {
+    getFilteredMembers().forEach(function(m) {
       if (checked) selectedRows.add(m.rowIndex); else selectedRows.delete(m.rowIndex);
     });
+    renderTable();
+  }
+
+  function quickSelectTyp(typ) {
+    // Wählt alle Mitglieder des gewünschten Typs (unter Berücksichtigung von Suche/Status/Beitrag-Filter) aus,
+    // unabhängig vom aktuellen Typ-Filter, damit man nicht erst manuell umschalten muss.
+    allMembers.filter(function(m) {
+      var q = document.getElementById('search').value.toLowerCase();
+      var fs = document.getElementById('filterStatus').value;
+      var fb = document.getElementById('filterBezahlt').value;
+      var text = [m.firma, m.vorname1, m.nachname1, m.mobile1, m.vorname2, m.nachname2, m.mobile2, m.email, m.bemerkung].join(' ').toLowerCase();
+      return m.typ === typ && (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb);
+    }).forEach(function(m) { selectedRows.add(m.rowIndex); });
+    renderTable();
+  }
+
+  function clearSelection() {
+    selectedRows.clear();
     renderTable();
   }
 
