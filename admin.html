@@ -46,6 +46,13 @@
   td.col-email { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .col-bemerkung { text-align: center; width: 1%; }
   #tableWrap.hide-address .col-address { display: none; }
+  #tableWrap.hide-person2 .col-person2 { display: none; }
+  /* Schmale, unaufdringliche Scrollbalken statt der breiten Standard-Balken */
+  #tableWrap, .card { scrollbar-width: thin; scrollbar-color: #c3c8d0 transparent; }
+  #tableWrap::-webkit-scrollbar, .card::-webkit-scrollbar { width: 8px; height: 8px; }
+  #tableWrap::-webkit-scrollbar-track, .card::-webkit-scrollbar-track { background: transparent; }
+  #tableWrap::-webkit-scrollbar-thumb, .card::-webkit-scrollbar-thumb { background: #c3c8d0; border-radius: 4px; }
+  #tableWrap::-webkit-scrollbar-thumb:hover, .card::-webkit-scrollbar-thumb:hover { background: #a8aeb8; }
   .col-action { text-align: center; white-space: nowrap; }
   tr.row-editing td { background: #fffbea; }
   tr.row-editing:hover td { background: #fef6d8; }
@@ -157,6 +164,7 @@
         </select>
         <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
         <button class="btn btn-outline btn-sm" id="toggleAddressBtn" onclick="toggleAddressColumns()">📍 Adresse ausblenden</button>
+        <button class="btn btn-outline btn-sm" id="togglePerson2Btn" onclick="togglePerson2Columns()">👥 Person 2 ausklappen</button>
         <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
         <button class="btn btn-outline btn-sm" onclick="openEmailExportModal()">📧 E-Mail Export</button>
       </div>
@@ -557,13 +565,13 @@
         textCell(m.rowIndex, 'ort1', m.ort1, false, 'col-address', editing) +
         textCell(m.rowIndex, 'mobile1', m.mobile1, false, '', editing) +
         textCell(m.rowIndex, 'email1', m.email1, false, 'col-email', editing) +
-        textCell(m.rowIndex, 'vorname2', m.vorname2, false, '', editing) +
-        textCell(m.rowIndex, 'nachname2', m.nachname2, false, '', editing) +
-        textCell(m.rowIndex, 'adresse2', m.adresse2, false, 'col-address', editing) +
-        textCell(m.rowIndex, 'plz2', m.plz2, false, 'col-address', editing) +
-        textCell(m.rowIndex, 'ort2', m.ort2, false, 'col-address', editing) +
-        textCell(m.rowIndex, 'mobile2', m.mobile2, false, '', editing) +
-        textCell(m.rowIndex, 'email2', m.email2, false, 'col-email', editing) +
+        textCell(m.rowIndex, 'vorname2', m.vorname2, false, 'col-person2', editing) +
+        textCell(m.rowIndex, 'nachname2', m.nachname2, false, 'col-person2', editing) +
+        textCell(m.rowIndex, 'adresse2', m.adresse2, false, 'col-address col-person2', editing) +
+        textCell(m.rowIndex, 'plz2', m.plz2, false, 'col-address col-person2', editing) +
+        textCell(m.rowIndex, 'ort2', m.ort2, false, 'col-address col-person2', editing) +
+        textCell(m.rowIndex, 'mobile2', m.mobile2, false, 'col-person2', editing) +
+        textCell(m.rowIndex, 'email2', m.email2, false, 'col-email col-person2', editing) +
         statusCell(m.rowIndex, m.status, editing) +
         selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja'], editing) +
         textCell(m.rowIndex, 'eintritt', m.eintritt, false, 'col-eintritt', editing) +
@@ -578,12 +586,13 @@
       '<th>Typ</th><th>Firma</th><th>Rest./Catering</th><th>Vorname 1</th><th>Nachname 1</th>' +
       '<th class="col-address">Adresse 1</th><th class="col-address">PLZ 1</th><th class="col-address">Ort 1</th>' +
       '<th>Mobile 1</th><th>E-Mail 1</th>' +
-      '<th>Vorname 2</th><th>Nachname 2</th>' +
-      '<th class="col-address">Adresse 2</th><th class="col-address">PLZ 2</th><th class="col-address">Ort 2</th>' +
-      '<th>Mobile 2</th><th>E-Mail 2</th>' +
+      '<th class="col-person2">Vorname 2</th><th class="col-person2">Nachname 2</th>' +
+      '<th class="col-address col-person2">Adresse 2</th><th class="col-address col-person2">PLZ 2</th><th class="col-address col-person2">Ort 2</th>' +
+      '<th class="col-person2">Mobile 2</th><th class="col-person2">E-Mail 2</th>' +
       '<th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
     applyAddressVisibility();
+    applyPerson2Visibility();
   }
 
   // ---------- Adresse ein-/ausblenden ----------
@@ -592,6 +601,21 @@
     addressColumnsVisible = !addressColumnsVisible;
     applyAddressVisibility();
   }
+  // ---------- Person 2 (Paar-Infos) ein-/ausklappen ----------
+  // Standardmässig eingeklappt: die meisten Mitglieder sind Einzel, so passt
+  // die Liste ohne horizontales Scrollen auf den Bildschirm.
+  var person2ColumnsVisible = false;
+  function togglePerson2Columns() {
+    person2ColumnsVisible = !person2ColumnsVisible;
+    applyPerson2Visibility();
+  }
+  function applyPerson2Visibility() {
+    var wrap = document.getElementById('tableWrap');
+    wrap.classList.toggle('hide-person2', !person2ColumnsVisible);
+    var btn = document.getElementById('togglePerson2Btn');
+    if (btn) btn.textContent = person2ColumnsVisible ? '👥 Person 2 einklappen' : '👥 Person 2 ausklappen';
+  }
+
   function applyAddressVisibility() {
     var wrap = document.getElementById('tableWrap');
     wrap.classList.toggle('hide-address', !addressColumnsVisible);
