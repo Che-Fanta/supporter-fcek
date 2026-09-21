@@ -167,7 +167,7 @@
         </select>
         <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
         <button class="btn btn-outline btn-sm" id="toggleAddressBtn" onclick="toggleAddressColumns()">📍 Adresse ausblenden</button>
-        <button class="btn btn-outline btn-sm" id="togglePerson2Btn" onclick="togglePerson2Columns()">👥 Person 2 ausklappen</button>
+        <button class="btn btn-outline btn-sm" id="togglePerson2Btn" onclick="togglePerson2Columns()">👥 Person 2 einblenden</button>
         <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
         <button class="btn btn-outline btn-sm" onclick="openEmailExportModal()">📧 E-Mail Export</button>
       </div>
@@ -605,7 +605,7 @@
     addressColumnsVisible = !addressColumnsVisible;
     applyAddressVisibility();
   }
-  // ---------- Person 2 (Paar-Infos) ein-/ausklappen ----------
+  // ---------- Person 2 (Paar-Infos) ein-/ausblenden ----------
   // Standardmässig eingeklappt: die meisten Mitglieder sind Einzel, so passt
   // die Liste ohne horizontales Scrollen auf den Bildschirm.
   var person2ColumnsVisible = false;
@@ -617,7 +617,7 @@
     var wrap = document.getElementById('tableWrap');
     wrap.classList.toggle('hide-person2', !person2ColumnsVisible);
     var btn = document.getElementById('togglePerson2Btn');
-    if (btn) btn.textContent = person2ColumnsVisible ? '👥 Person 2 einklappen' : '👥 Person 2 ausklappen';
+    if (btn) btn.textContent = person2ColumnsVisible ? '👥 Person 2 ausblenden' : '👥 Person 2 einblenden';
   }
 
   function applyAddressVisibility() {
