@@ -678,12 +678,31 @@
     closeBemerkungModal();
   }
 
+  // <input type="month"> erwartet "yyyy-MM", im Sheet steht aber "dd.MM.yyyy" —
+  // ohne Umwandlung zeigt der Browser das Feld stillschweigend leer an.
+  function toMonthInput(value) {
+    var v = (value === null || value === undefined) ? '' : String(value).trim();
+    var m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (m) return m[3] + '-' + ('0' + m[2]).slice(-2);
+    return /^\d{4}-\d{2}$/.test(v) ? v : '';
+  }
+
+  function fromMonthInput(value) {
+    var v = (value || '').trim();
+    var m = v.match(/^(\d{4})-(\d{2})$/);
+    return m ? '01.' + m[2] + '.' + m[1] : v;
+  }
+
+  function updateMonthField(rowIndex, field, value) {
+    updateField(rowIndex, field, fromMonthInput(value));
+  }
+
   function monthCell(rowIndex, field, value, disabled) {
     var v = (value === null || value === undefined) ? '' : value;
     var tooltip = disabled ? 'Nur editierbar wenn Status = Inaktiv' : v;
-    return '<td class="col-eintritt"><input type="month" id="austritt-' + rowIndex + '" class="cell-input" value="' + escAttr(v) +
+    return '<td class="col-eintritt"><input type="month" id="austritt-' + rowIndex + '" class="cell-input" value="' + escAttr(toMonthInput(v)) +
       '" title="' + escAttr(tooltip) + '"' + (disabled ? ' disabled' : '') +
-      ' onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
+      ' onchange="updateMonthField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
   }
 
   function textCell(rowIndex, field, value, isTyp, extraClass) {
@@ -803,7 +822,7 @@
       status: document.getElementById('mStatus').value,
       beitragBezahlt: document.getElementById('mBez').value,
       eintritt: document.getElementById('mEintritt').value.trim(),
-      austritt: document.getElementById('mAustritt').value.trim(),
+      austritt: fromMonthInput(document.getElementById('mAustritt').value),
       bemerkung: document.getElementById('mBemerkung').value.trim()
     };
     if (!data.vorname1 || !data.nachname1 || !data.adresse1 || !data.plz1 || !data.ort1) {
