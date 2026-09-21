@@ -224,7 +224,7 @@
       <label>Adresse 2</label><input type="text" id="mAdresse2">
       <label>PLZ 2</label><input type="text" id="mPlz2">
       <label>Ort 2</label><input type="text" id="mOrt2">
-      <label>Mobile 2 (optional)</label><input type="text" id="mMobil2">
+      <label>Mobile 2</label><input type="text" id="mMobil2">
       <label>E-Mail 2</label><input type="text" id="mEmail2">
     </div>
     <label>Status</label>
@@ -795,6 +795,9 @@
     };
     if (!data.vorname1 || !data.nachname1 || !data.adresse1 || !data.plz1 || !data.ort1) {
       alert('Bitte mind. Vorname, Nachname und Adresse (1) ausfüllen.'); return;
+    }
+    if (data.typ === 'Paar' && (!data.vorname2 || !data.nachname2 || !data.adresse2 || !data.plz2 || !data.ort2 || !data.email2)) {
+      alert('Bitte bei Paar auch Vorname, Nachname, Adresse und E-Mail der zweiten Person ausfüllen.'); return;
     }
     fetch(SCRIPT_URL, {
       method: 'POST',
