@@ -517,7 +517,7 @@
       var bInaktiv = b.status === 'Inaktiv' ? 1 : 0;
       if (aInaktiv !== bInaktiv) return aInaktiv - bInaktiv;
       if (a.typ !== b.typ) return (a.typ === 'Einzel' ? 0 : 1) - (b.typ === 'Einzel' ? 0 : 1);
-      return (a.nachname1 || '').localeCompare(b.nachname1 || '');
+      return (a.nachname1 || '').localeCompare(b.nachname1 || '') || (a.vorname1 || '').localeCompare(b.vorname1 || '');
     });
   }
 
