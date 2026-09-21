@@ -30,30 +30,29 @@
   .btn-outline { background: #fff; border: 1px solid var(--border); color: #333; }
   #tableWrap { max-height: 65vh; overflow: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  th { background: #f0f2f5; padding: 9px 8px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
-  td { padding: 5px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { background: #f0f2f5; padding: 6px 7px; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 1; }
+  td { padding: 3px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:hover td { background: #f9fafc; }
   tr.row-unpaid td { background: #fdecea; }
   tr.row-paid td { background: #e9f7ef; }
   tr.row-unpaid:hover td { background: #fbdedb; }
   tr.row-paid:hover td { background: #d9f0e3; }
-  .cell-input { width: 100%; min-width: 90px; padding: 5px 6px; font-size: 0.83rem; border: 1px solid transparent; border-radius: 5px; background: transparent; }
+  .cell-input { width: 100%; min-width: 90px; padding: 3px 5px; font-size: 0.83rem; border: 1px solid transparent; border-radius: 5px; background: transparent; }
   .cell-input:hover { border-color: var(--border); }
   .cell-input:focus { outline: none; border-color: var(--fcek-blue); background: #fff; }
   select.cell-input { min-width: 78px; }
   .col-eintritt .cell-input { min-width: 110px; }
   .col-email .cell-input { min-width: 150px; }
   td.col-email { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .col-bemerkung { text-align: center; }
+  .col-bemerkung { text-align: center; width: 1%; }
   #tableWrap.hide-address .col-address { display: none; }
   .col-action { text-align: center; white-space: nowrap; }
   tr.row-editing td { background: #fffbea; }
   tr.row-editing:hover td { background: #fef6d8; }
-  .bemerkung-link { background: none; border: none; cursor: pointer; color: var(--fcek-blue); font-size: 0.85rem; padding: 4px 8px; border-radius: 5px; text-decoration: underline; display: inline-flex; align-items: center; gap: 5px; }
-  .bemerkung-link:hover { background: #eef1f6; }
-  .bemerkung-link.empty { color: #aab; text-decoration: none; }
-  .bemerkung-link.empty:hover { text-decoration: underline; }
-  .bemerkung-dot { width: 7px; height: 7px; border-radius: 50%; background: #d9a300; flex-shrink: 0; }
+  .bemerkung-link { background: none; border: none; cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 3px 6px; border-radius: 5px; opacity: 0.9; }
+  .bemerkung-link:hover { background: #eef1f6; opacity: 1; }
+  .bemerkung-link.empty { opacity: 0.35; }
+  .bemerkung-link.empty:hover { opacity: 0.7; }
   #bemerkungModal textarea { width: 100%; min-height: 120px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 0.9rem; font-family: inherit; resize: vertical; }
   .loading { text-align: center; padding: 30px; color: #888; }
   .msg { padding: 10px 14px; border-radius: 7px; font-size: 0.88rem; margin-bottom: 12px; display: none; }
@@ -637,11 +636,10 @@
   function bemerkungCell(rowIndex, value, type) {
     var v = (value === null || value === undefined) ? '' : String(value);
     var hasText = v.trim().length > 0;
-    var label = hasText ? (v.length > 20 ? v.slice(0, 20) + '…' : v) : '+ hinzufügen';
-    var dot = hasText ? '<span class="bemerkung-dot"></span>' : '';
-    var tooltip = hasText ? ' title="' + escAttr(v) + '"' : '';
+    var tooltip = hasText ? escAttr(v) : 'Bemerkung hinzufügen';
     return '<td class="col-bemerkung"><button type="button" class="bemerkung-link' + (hasText ? '' : ' empty') +
-      '"' + tooltip + ' onclick="openBemerkungModal(' + rowIndex + ',\'' + (type || 'member') + '\')">' + dot + escAttr(label) + '</button></td>';
+      '" title="' + tooltip + '" onclick="openBemerkungModal(' + rowIndex + ',\'' + (type || 'member') + '\')">' +
+      (hasText ? '💬' : '➕') + '</button></td>';
   }
 
   function openBemerkungModal(rowIndex, type) {
