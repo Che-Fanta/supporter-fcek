@@ -44,6 +44,7 @@
   .col-eintritt .cell-input { min-width: 110px; }
   .col-email .cell-input { min-width: 150px; }
   .col-bemerkung { text-align: center; }
+  #tableWrap.hide-address .col-address { display: none; }
   .bemerkung-link { background: none; border: none; cursor: pointer; color: var(--fcek-blue); font-size: 0.85rem; padding: 4px 8px; border-radius: 5px; text-decoration: underline; display: inline-flex; align-items: center; gap: 5px; }
   .bemerkung-link:hover { background: #eef1f6; }
   .bemerkung-link.empty { color: #aab; text-decoration: none; }
@@ -152,6 +153,7 @@
           <option value="Einzel">Nur Einzel</option><option value="Paar">Nur Paar</option>
         </select>
         <button class="btn btn-primary" onclick="openAddModal()">+ Manuell erfassen</button>
+        <button class="btn btn-outline btn-sm" id="toggleAddressBtn" onclick="toggleAddressColumns()">📍 Adresse ausblenden</button>
         <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
         <button class="btn btn-outline btn-sm" onclick="openEmailExportModal()">📧 E-Mail Export</button>
       </div>
@@ -211,12 +213,19 @@
     <select id="mRestaurant"><option>Nein</option><option>Ja</option></select>
     <label>Vorname 1</label><input type="text" id="mVn1">
     <label>Nachname 1</label><input type="text" id="mNn1">
+    <label>Adresse 1</label><input type="text" id="mAdresse1">
+    <label>PLZ 1</label><input type="text" id="mPlz1">
+    <label>Ort 1</label><input type="text" id="mOrt1">
     <label>Mobile 1 (optional)</label><input type="text" id="mMobil1">
-    <label>E-Mail</label><input type="text" id="mEmail">
+    <label>E-Mail 1</label><input type="text" id="mEmail1">
     <div id="mPaarDiv" style="display:none">
       <label>Vorname 2</label><input type="text" id="mVn2">
       <label>Nachname 2</label><input type="text" id="mNn2">
+      <label>Adresse 2</label><input type="text" id="mAdresse2">
+      <label>PLZ 2</label><input type="text" id="mPlz2">
+      <label>Ort 2</label><input type="text" id="mOrt2">
       <label>Mobile 2 (optional)</label><input type="text" id="mMobil2">
+      <label>E-Mail 2</label><input type="text" id="mEmail2">
     </div>
     <label>Status</label>
     <select id="mStatus" onchange="toggleAustritt()"><option>Neu</option><option>Aktiv</option><option>Inaktiv</option></select>
@@ -510,7 +519,8 @@
     var ft = document.getElementById('filterTyp').value;
 
     return allMembers.filter(function(m) {
-      var text = [m.firma, m.vorname1, m.nachname1, m.mobile1, m.vorname2, m.nachname2, m.mobile2, m.email, m.bemerkung].join(' ').toLowerCase();
+      var text = [m.firma, m.vorname1, m.nachname1, m.adresse1, m.plz1, m.ort1, m.mobile1, m.email1,
+        m.vorname2, m.nachname2, m.adresse2, m.plz2, m.ort2, m.mobile2, m.email2, m.bemerkung].join(' ').toLowerCase();
       return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb) && (!ft || m.typ === ft);
     }).sort(function(a, b) {
       var aInaktiv = a.status === 'Inaktiv' ? 1 : 0;
@@ -537,11 +547,18 @@
         selectCell(m.rowIndex, 'restaurantCatering', m.restaurantCatering, ['Nein','Ja']) +
         textCell(m.rowIndex, 'vorname1', m.vorname1) +
         textCell(m.rowIndex, 'nachname1', m.nachname1) +
+        textCell(m.rowIndex, 'adresse1', m.adresse1, false, 'col-address') +
+        textCell(m.rowIndex, 'plz1', m.plz1, false, 'col-address') +
+        textCell(m.rowIndex, 'ort1', m.ort1, false, 'col-address') +
         textCell(m.rowIndex, 'mobile1', m.mobile1) +
+        textCell(m.rowIndex, 'email1', m.email1, false, 'col-email') +
         textCell(m.rowIndex, 'vorname2', m.vorname2) +
         textCell(m.rowIndex, 'nachname2', m.nachname2) +
+        textCell(m.rowIndex, 'adresse2', m.adresse2, false, 'col-address') +
+        textCell(m.rowIndex, 'plz2', m.plz2, false, 'col-address') +
+        textCell(m.rowIndex, 'ort2', m.ort2, false, 'col-address') +
         textCell(m.rowIndex, 'mobile2', m.mobile2) +
-        textCell(m.rowIndex, 'email', m.email, false, 'col-email') +
+        textCell(m.rowIndex, 'email2', m.email2, false, 'col-email') +
         statusCell(m.rowIndex, m.status) +
         selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja']) +
         textCell(m.rowIndex, 'eintritt', m.eintritt, false, 'col-eintritt') +
@@ -552,10 +569,28 @@
 
     document.getElementById('tableWrap').innerHTML =
       '<table><thead><tr>' +
-      '<th>Typ</th><th>Firma</th><th>Rest./Catering</th><th>Vorname 1</th><th>Nachname 1</th><th>Mobile 1</th>' +
-      '<th>Vorname 2</th><th>Nachname 2</th><th>Mobile 2</th>' +
-      '<th>E-Mail</th><th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
+      '<th>Typ</th><th>Firma</th><th>Rest./Catering</th><th>Vorname 1</th><th>Nachname 1</th>' +
+      '<th class="col-address">Adresse 1</th><th class="col-address">PLZ 1</th><th class="col-address">Ort 1</th>' +
+      '<th>Mobile 1</th><th>E-Mail 1</th>' +
+      '<th>Vorname 2</th><th>Nachname 2</th>' +
+      '<th class="col-address">Adresse 2</th><th class="col-address">PLZ 2</th><th class="col-address">Ort 2</th>' +
+      '<th>Mobile 2</th><th>E-Mail 2</th>' +
+      '<th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
+    applyAddressVisibility();
+  }
+
+  // ---------- Adresse ein-/ausblenden ----------
+  var addressColumnsVisible = true;
+  function toggleAddressColumns() {
+    addressColumnsVisible = !addressColumnsVisible;
+    applyAddressVisibility();
+  }
+  function applyAddressVisibility() {
+    var wrap = document.getElementById('tableWrap');
+    wrap.classList.toggle('hide-address', !addressColumnsVisible);
+    var btn = document.getElementById('toggleAddressBtn');
+    if (btn) btn.textContent = addressColumnsVisible ? '📍 Adresse ausblenden' : '📍 Adresse einblenden';
   }
 
   // ---------- E-Mail-Export ----------
@@ -567,8 +602,12 @@
 
     var emails = [];
     activeMembers.forEach(function(m) {
-      var e = (m.email || '').trim();
-      if (e && emails.indexOf(e) === -1) emails.push(e);
+      var e1 = (m.email1 || '').trim();
+      if (e1 && emails.indexOf(e1) === -1) emails.push(e1);
+      if (m.typ === 'Paar') {
+        var e2 = (m.email2 || '').trim();
+        if (e2 && emails.indexOf(e2) === -1) emails.push(e2);
+      }
     });
 
     closeEmailExportModal();
@@ -736,18 +775,27 @@
       restaurantCatering: document.getElementById('mRestaurant').value,
       vorname1: document.getElementById('mVn1').value.trim(),
       nachname1: document.getElementById('mNn1').value.trim(),
+      adresse1: document.getElementById('mAdresse1').value.trim(),
+      plz1: document.getElementById('mPlz1').value.trim(),
+      ort1: document.getElementById('mOrt1').value.trim(),
       mobile1: document.getElementById('mMobil1').value.trim(),
-      email: document.getElementById('mEmail').value.trim(),
+      email1: document.getElementById('mEmail1').value.trim(),
       vorname2: document.getElementById('mVn2').value.trim(),
       nachname2: document.getElementById('mNn2').value.trim(),
+      adresse2: document.getElementById('mAdresse2').value.trim(),
+      plz2: document.getElementById('mPlz2').value.trim(),
+      ort2: document.getElementById('mOrt2').value.trim(),
       mobile2: document.getElementById('mMobil2').value.trim(),
+      email2: document.getElementById('mEmail2').value.trim(),
       status: document.getElementById('mStatus').value,
       beitragBezahlt: document.getElementById('mBez').value,
       eintritt: document.getElementById('mEintritt').value.trim(),
       austritt: document.getElementById('mAustritt').value.trim(),
       bemerkung: document.getElementById('mBemerkung').value.trim()
     };
-    if (!data.vorname1 || !data.nachname1) { alert('Bitte mind. Vorname und Nachname ausfüllen.'); return; }
+    if (!data.vorname1 || !data.nachname1 || !data.adresse1 || !data.plz1 || !data.ort1) {
+      alert('Bitte mind. Vorname, Nachname und Adresse (1) ausfüllen.'); return;
+    }
     fetch(SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -767,9 +815,14 @@
   }
 
   function exportCsv() {
-    var rows = [['Typ','Firma','Restaurant/Catering','Vorname1','Nachname1','Mobile 1','Vorname2','Nachname2','Mobile 2','Email','Status','Beitrag bezahlt','Eintritt','Austritt','Bemerkung']];
+    var rows = [['Typ','Firma','Restaurant/Catering','Vorname1','Nachname1','Adresse 1','PLZ 1','Ort 1','Email 1','Mobile 1',
+      'Vorname2','Nachname2','Adresse 2','PLZ 2','Ort 2','Email 2','Mobile 2',
+      'Status','Beitrag bezahlt','Eintritt','Austritt','Bemerkung']];
     allMembers.forEach(function(m) {
-      rows.push([m.typ, m.firma||'', m.restaurantCatering||'', m.vorname1, m.nachname1, m.mobile1||'', m.vorname2||'', m.nachname2||'', m.mobile2||'', m.email, m.status, m.beitragBezahlt, m.eintritt||'', m.austritt||'', m.bemerkung||'']);
+      rows.push([m.typ, m.firma||'', m.restaurantCatering||'', m.vorname1, m.nachname1,
+        m.adresse1||'', m.plz1||'', m.ort1||'', m.email1||'', m.mobile1||'',
+        m.vorname2||'', m.nachname2||'', m.adresse2||'', m.plz2||'', m.ort2||'', m.email2||'', m.mobile2||'',
+        m.status, m.beitragBezahlt, m.eintritt||'', m.austritt||'', m.bemerkung||'']);
     });
     var csv = rows.map(function(r) {
       return r.map(function(c) {
