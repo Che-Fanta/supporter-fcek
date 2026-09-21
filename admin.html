@@ -512,6 +512,12 @@
     return allMembers.filter(function(m) {
       var text = [m.firma, m.vorname1, m.nachname1, m.mobile1, m.vorname2, m.nachname2, m.mobile2, m.email, m.bemerkung].join(' ').toLowerCase();
       return (!q || text.includes(q)) && (!fs || m.status === fs) && (!fb || m.beitragBezahlt === fb) && (!ft || m.typ === ft);
+    }).sort(function(a, b) {
+      var aInaktiv = a.status === 'Inaktiv' ? 1 : 0;
+      var bInaktiv = b.status === 'Inaktiv' ? 1 : 0;
+      if (aInaktiv !== bInaktiv) return aInaktiv - bInaktiv;
+      if (a.typ !== b.typ) return (a.typ === 'Einzel' ? 0 : 1) - (b.typ === 'Einzel' ? 0 : 1);
+      return (a.nachname1 || '').localeCompare(b.nachname1 || '');
     });
   }
 
