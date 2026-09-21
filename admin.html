@@ -44,6 +44,9 @@
   .col-eintritt .cell-input { min-width: 110px; }
   .col-email .cell-input { min-width: 150px; }
   td.col-email { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.col-firma { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .col-narrow { width: 1%; }
+  td.col-narrow .cell-input { min-width: 58px; }
   .col-bemerkung { text-align: center; width: 1%; }
   #tableWrap.hide-address .col-address { display: none; }
   #tableWrap.hide-person2 .col-person2 { display: none; }
@@ -556,8 +559,8 @@
       return '<tr class="' + rowClass + (editing ? ' row-editing' : '') + '" data-row="' + m.rowIndex + '">' +
         editCell(m.rowIndex, editing) +
         textCell(m.rowIndex, 'typ', m.typ, true, '', editing) +
-        textCell(m.rowIndex, 'firma', m.firma, false, '', editing) +
-        selectCell(m.rowIndex, 'restaurantCatering', m.restaurantCatering, ['Nein','Ja'], editing) +
+        textCell(m.rowIndex, 'firma', m.firma, false, 'col-firma', editing) +
+        selectCell(m.rowIndex, 'restaurantCatering', m.restaurantCatering, ['Nein','Ja'], editing, 'col-narrow') +
         textCell(m.rowIndex, 'vorname1', m.vorname1, false, '', editing) +
         textCell(m.rowIndex, 'nachname1', m.nachname1, false, '', editing) +
         textCell(m.rowIndex, 'adresse1', m.adresse1, false, 'col-address', editing) +
@@ -573,7 +576,8 @@
         textCell(m.rowIndex, 'mobile2', m.mobile2, false, 'col-person2', editing) +
         textCell(m.rowIndex, 'email2', m.email2, false, 'col-email col-person2', editing) +
         statusCell(m.rowIndex, m.status, editing) +
-        selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja'], editing) +
+        // Beitrag ist ohne Bearbeitungsmodus änderbar — wird im Alltag am häufigsten angepasst
+        selectCell(m.rowIndex, 'beitragBezahlt', m.beitragBezahlt, ['Nein','Ja'], true, 'col-narrow') +
         textCell(m.rowIndex, 'eintritt', m.eintritt, false, 'col-eintritt', editing) +
         monthCell(m.rowIndex, 'austritt', m.austritt, m.status !== 'Inaktiv', editing) +
         bemerkungCell(m.rowIndex, m.bemerkung) +
@@ -583,13 +587,13 @@
     document.getElementById('tableWrap').innerHTML =
       '<table><thead><tr>' +
       '<th></th>' +
-      '<th>Typ</th><th>Firma</th><th>Rest./Catering</th><th>Vorname 1</th><th>Nachname 1</th>' +
+      '<th>Typ</th><th class="col-firma">Firma</th><th class="col-narrow" title="Restaurant/Catering">Rest.</th><th>Vorname 1</th><th>Nachname 1</th>' +
       '<th class="col-address">Adresse 1</th><th class="col-address">PLZ 1</th><th class="col-address">Ort 1</th>' +
       '<th>Mobile 1</th><th>E-Mail 1</th>' +
       '<th class="col-person2">Vorname 2</th><th class="col-person2">Nachname 2</th>' +
       '<th class="col-address col-person2">Adresse 2</th><th class="col-address col-person2">PLZ 2</th><th class="col-address col-person2">Ort 2</th>' +
       '<th class="col-person2">Mobile 2</th><th class="col-person2">E-Mail 2</th>' +
-      '<th>Status</th><th>Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
+      '<th>Status</th><th class="col-narrow">Beitrag</th><th>Eintritt</th><th>Austritt</th><th>Bemerkung</th>' +
       '</tr></thead><tbody>' + rows + '</tbody></table>';
     applyAddressVisibility();
     applyPerson2Visibility();
@@ -743,12 +747,13 @@
       '" title="' + escAttr(v) + '" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)"></td>';
   }
 
-  function selectCell(rowIndex, field, value, options, editing) {
-    if (!editing) return '<td>' + escAttr(value || '') + '</td>';
+  function selectCell(rowIndex, field, value, options, editing, extraClass) {
+    var cls = extraClass ? ' class="' + extraClass + '"' : '';
+    if (!editing) return '<td' + cls + '>' + escAttr(value || '') + '</td>';
     var opts = options.map(function(o) {
       return '<option' + (value === o ? ' selected' : '') + '>' + o + '</option>';
     }).join('');
-    return '<td><select class="cell-input" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)">' + opts + '</select></td>';
+    return '<td' + cls + '><select class="cell-input" onchange="updateField(' + rowIndex + ',\'' + field + '\',this.value)">' + opts + '</select></td>';
   }
 
   function statusCell(rowIndex, value, editing) {
