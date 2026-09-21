@@ -752,8 +752,21 @@
       .catch(function(err) { showMsg('Fehler beim Speichern: ' + err.message, 'err'); });
   }
 
-  function openAddModal() { document.getElementById('addModal').classList.add('open'); }
+  function openAddModal() { resetAddModal(); document.getElementById('addModal').classList.add('open'); }
   function closeModal() { document.getElementById('addModal').classList.remove('open'); }
+  function resetAddModal() {
+    ['mFirma','mVn1','mNn1','mAdresse1','mPlz1','mOrt1','mMobil1','mEmail1',
+     'mVn2','mNn2','mAdresse2','mPlz2','mOrt2','mMobil2','mEmail2',
+     'mEintritt','mAustritt','mBemerkung'].forEach(function(id) {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('mTyp').value = 'Einzel';
+    document.getElementById('mRestaurant').value = 'Nein';
+    document.getElementById('mStatus').value = 'Neu';
+    document.getElementById('mBez').value = 'Nein';
+    togglePaar2();
+    toggleAustritt();
+  }
   function togglePaar2() {
     document.getElementById('mPaarDiv').style.display = document.getElementById('mTyp').value === 'Paar' ? 'block' : 'none';
   }
