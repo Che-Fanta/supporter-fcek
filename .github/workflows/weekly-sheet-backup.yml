@@ -1,0 +1,33 @@
+name: Weekly Sheet Backup
+
+on:
+  schedule:
+    # 18:00 Sommerzeit (MESZ, UTC+2) = 16:00 UTC
+    - cron: '0 16 * * 0'
+    # 18:00 Winterzeit (MEZ, UTC+1) = 17:00 UTC
+    - cron: '0 17 * * 0'
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo auschecken
+        uses: actions/checkout@v4
+
+      - name: Sheet als Excel-Datei herunterladen
+        env:
+          SHEET_ID: '1bfS61g1bKwtJ-vtdrDcThQoLgpdVCwZhPycI4ickHF0'
+        run: |
+          mkdir -p Archiv
+          DATE=$(date +'%Y-%m-%d')
+          curl -sL "https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=xlsx" \
+            -o "Archiv/backup_${DATE}.xlsx"
+
+      - name: Änderungen committen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Archiv/
+          git diff --cached --quiet || git commit -m "Wöchentliches Backup $(date +'%Y-%m-%d')"
+          git push
