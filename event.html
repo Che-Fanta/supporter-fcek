@@ -81,7 +81,7 @@
   }
   .program-list li:last-child { border-bottom: none; }
   .program-list .dot { color: var(--fcek-blue); font-size: 1.1rem; line-height: 1; margin-top: 1px; }
-  .timeline { position: relative; margin: 0 0 6px; padding-left: 2px; }
+  .timeline { position: relative; margin: 0 0 22px; padding-left: 2px; }
   .timeline-item { position: relative; padding: 0 0 18px 24px; border-left: 2px solid #d7ddea; }
   .timeline-item:last-child { border-left: 2px solid transparent; padding-bottom: 0; }
   .timeline-item::before {
@@ -232,9 +232,7 @@
     const isClosed = ev.anmeldeschlussIso && new Date() > new Date(ev.anmeldeschlussIso);
 
     if (ev.programm && ev.programm.length) {
-      html += `<div class="card"><div class="section-title"><span class="icon">🎯</span> Programm</div><ul class="program-list">`;
-      ev.programm.forEach(p => { html += `<li><span class="dot">●</span> ${escapeHtml(p)}</li>`; });
-      html += `</ul>`;
+      html += `<div class="card">`;
 
       if (ev.ablauf && ev.ablauf.length) {
         html += `<div class="section-title"><span class="icon">🕒</span> Ablauf</div><div class="timeline">`;
@@ -243,6 +241,11 @@
         });
         html += `</div>`;
       }
+
+      html += `<div class="section-title"><span class="icon">🎯</span> Turnier-Infos</div><ul class="program-list">`;
+      ev.programm.forEach(p => { html += `<li><span class="dot">●</span> ${escapeHtml(p)}</li>`; });
+      html += `</ul>`;
+
       if (ev.anmeldeschluss) html += `<div class="deadline">⏰ Anmeldeschluss: ${escapeHtml(ev.anmeldeschluss)}${isClosed ? ' — abgelaufen' : ''}</div>`;
       html += `</div>`;
     }
