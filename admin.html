@@ -279,6 +279,19 @@
   </div>
 </div>
 
+<div class="modal-bg" id="postalModal">
+  <div class="modal">
+    <h3>Adressen ohne E-Mail</h3>
+    <p id="postalInfo" style="color:#666;font-size:0.88rem;margin-top:-8px"></p>
+    <textarea id="postalText" readonly style="width:100%;height:260px;font-family:monospace;font-size:0.85rem;white-space:pre"></textarea>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closePostalModal()">Schliessen</button>
+      <button class="btn btn-outline" onclick="copyPostal()">📋 Kopieren</button>
+      <button class="btn btn-primary" onclick="downloadPostalCsv()">⬇️ CSV herunterladen</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRdnWSMsIVCi9hx2vqC83zSxaF1jZPU0IhLq5MmxHwk_GgmtNWFJHU4U8nhqYPmm-rEQ/exec";
 
@@ -668,6 +681,8 @@
   }
 
   // ---------- Postadressen (Mitglieder ohne E-Mail) ----------
+  var postalRows = [];
+
   function exportPostalAddresses() {
     var members = allMembers.filter(function(m) {
       if (m.status === 'Inaktiv') return false;
@@ -680,7 +695,7 @@
       return;
     }
 
-    var rows = [['Firma','Name','Adresse','PLZ','Ort']];
+    postalRows = [['Firma','Name','Adresse','PLZ','Ort']];
     members.forEach(function(m) {
       var v1 = (m.vorname1 || '').trim(), n1 = (m.nachname1 || '').trim();
       var v2 = (m.vorname2 || '').trim(), n2 = (m.nachname2 || '').trim();
@@ -694,20 +709,39 @@
       var plz = (m.plz1 || '').trim();
       var ort = (m.ort1 || '').trim();
       if (!adr && !plz && !ort) { adr = (m.adresse2 || '').trim(); plz = (m.plz2 || '').trim(); ort = (m.ort2 || '').trim(); }
-      rows.push([(m.firma || '').trim(), name, adr, plz, ort]);
+      postalRows.push([(m.firma || '').trim(), name, adr, plz, ort]);
     });
 
-    var csv = rows.map(function(r) {
+    document.getElementById('postalInfo').textContent = members.length + ' Mitglied(er) ohne E-Mail (ohne inaktive).';
+    document.getElementById('postalText').value = postalRows.map(function(r) { return r.join('	'); }).join('
+');
+    document.getElementById('postalModal').classList.add('open');
+  }
+
+  function closePostalModal() { document.getElementById('postalModal').classList.remove('open'); }
+
+  function copyPostal() {
+    var ta = document.getElementById('postalText');
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    if (!ok && navigator.clipboard) navigator.clipboard.writeText(ta.value);
+    showMsg('Adressliste kopiert (Tab-getrennt, einfügbar in Excel).', 'ok');
+  }
+
+  function downloadPostalCsv() {
+    var csv = postalRows.map(function(r) {
       return r.map(function(c) {
         var s = (c || '').toString();
         return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g, '""') + '"' : s;
       }).join(',');
-    }).join('\n');
+    }).join('
+');
     var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href = url; a.download = 'adressen-ohne-email.csv'; a.click();
-    URL.revokeObjectURL(url);
-    showMsg(members.length + ' Adresse(n) von Mitgliedern ohne E-Mail exportiert (ohne inaktive).', 'ok');
+    var a = document.createElement('a'); a.href = url; a.download = 'adressen-ohne-email.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
   }
 
   function bemerkungCell(rowIndex, value, type) {
