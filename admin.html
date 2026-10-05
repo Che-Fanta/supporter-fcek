@@ -713,8 +713,7 @@
     });
 
     document.getElementById('postalInfo').textContent = members.length + ' Mitglied(er) ohne E-Mail (ohne inaktive).';
-    document.getElementById('postalText').value = postalRows.map(function(r) { return r.join('	'); }).join('
-');
+    document.getElementById('postalText').value = postalRows.map(function(r) { return r.join('\t'); }).join('\n');
     document.getElementById('postalModal').classList.add('open');
   }
 
@@ -735,8 +734,7 @@
         var s = (c || '').toString();
         return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g, '""') + '"' : s;
       }).join(',');
-    }).join('
-');
+    }).join('\n');
     var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a'); a.href = url; a.download = 'adressen-ohne-email.csv';
