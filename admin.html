@@ -175,7 +175,7 @@
         <button class="btn btn-outline btn-sm" id="togglePerson2Btn" onclick="togglePerson2Columns()">👥 Person 2 einblenden</button>
         <button class="btn btn-outline btn-sm" onclick="exportCsv()">CSV Export</button>
         <button class="btn btn-outline btn-sm" onclick="openEmailExportModal()">📧 E-Mail Export</button>
-        <button class="btn btn-outline btn-sm" onclick="exportPostalAddresses()" title="Adressliste (CSV) aller nicht inaktiven Mitglieder ohne E-Mail-Adresse">✉️ Adressen ohne E-Mail</button>
+        <button class="btn btn-outline btn-sm" onclick="exportPostalAddresses()" title="Postadressen aller nicht inaktiven Mitglieder ohne E-Mail-Adresse">✉️ Adressen ohne E-Mail</button>
       </div>
       <div id="tableWrap"><div class="loading">Wird geladen…</div></div>
     </div>
@@ -287,7 +287,7 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closePostalModal()">Schliessen</button>
       <button class="btn btn-outline" onclick="copyPostal()">📋 Kopieren</button>
-      <button class="btn btn-primary" onclick="downloadPostalCsv()">⬇️ CSV herunterladen</button>
+      <button class="btn btn-primary" onclick="downloadPostalTxt()">⬇️ Textdatei herunterladen</button>
     </div>
   </div>
 </div>
@@ -681,12 +681,13 @@
   }
 
   // ---------- Postadressen (Mitglieder ohne E-Mail) ----------
-  var postalRows = [];
+  var postalText = '';
 
   function exportPostalAddresses() {
+    var t = function(v) { return (v === null || v === undefined) ? '' : String(v).trim(); };
     var members = allMembers.filter(function(m) {
       if (m.status === 'Inaktiv') return false;
-      var hasEmail = (m.email1 || '').trim() || (m.typ === 'Paar' && (m.email2 || '').trim());
+      var hasEmail = t(m.email1) || (m.typ === 'Paar' && t(m.email2));
       return !hasEmail;
     });
 
@@ -695,25 +696,23 @@
       return;
     }
 
-    postalRows = [['Firma','Name','Adresse','PLZ','Ort']];
-    members.forEach(function(m) {
-      var v1 = (m.vorname1 || '').trim(), n1 = (m.nachname1 || '').trim();
-      var v2 = (m.vorname2 || '').trim(), n2 = (m.nachname2 || '').trim();
+    var blocks = members.map(function(m) {
+      var v1 = t(m.vorname1), n1 = t(m.nachname1);
+      var v2 = t(m.vorname2), n2 = t(m.nachname2);
       var name = (v1 + ' ' + n1).trim();
       if (m.typ === 'Paar' && (v2 || n2)) {
         name = (n1 && n1 === n2)
           ? (v1 + ' und ' + v2 + ' ' + n1).trim()
           : name + ' und ' + (v2 + ' ' + n2).trim();
       }
-      var adr = (m.adresse1 || '').trim();
-      var plz = (m.plz1 || '').trim();
-      var ort = (m.ort1 || '').trim();
-      if (!adr && !plz && !ort) { adr = (m.adresse2 || '').trim(); plz = (m.plz2 || '').trim(); ort = (m.ort2 || '').trim(); }
-      postalRows.push([(m.firma || '').trim(), name, adr, plz, ort]);
+      var adr = t(m.adresse1), plz = t(m.plz1), ort = t(m.ort1);
+      if (!adr && !plz && !ort) { adr = t(m.adresse2); plz = t(m.plz2); ort = t(m.ort2); }
+      return [t(m.firma), name, adr, (plz + ' ' + ort).trim()].filter(Boolean).join('\n');
     });
 
+    postalText = blocks.join('\n\n') + '\n';
     document.getElementById('postalInfo').textContent = members.length + ' Mitglied(er) ohne E-Mail (ohne inaktive).';
-    document.getElementById('postalText').value = postalRows.map(function(r) { return r.join('\t'); }).join('\n');
+    document.getElementById('postalText').value = postalText;
     document.getElementById('postalModal').classList.add('open');
   }
 
@@ -725,19 +724,13 @@
     var ok = false;
     try { ok = document.execCommand('copy'); } catch (e) {}
     if (!ok && navigator.clipboard) navigator.clipboard.writeText(ta.value);
-    showMsg('Adressliste kopiert (Tab-getrennt, einfügbar in Excel).', 'ok');
+    showMsg('Adressliste in die Zwischenablage kopiert.', 'ok');
   }
 
-  function downloadPostalCsv() {
-    var csv = postalRows.map(function(r) {
-      return r.map(function(c) {
-        var s = (c || '').toString();
-        return s.includes(',') || s.includes('"') ? '"' + s.replace(/"/g, '""') + '"' : s;
-      }).join(',');
-    }).join('\n');
-    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  function downloadPostalTxt() {
+    var blob = new Blob(['\uFEFF' + postalText.replace(/\n/g, '\r\n')], { type: 'text/plain;charset=utf-8;' });
     var url = URL.createObjectURL(blob);
-    var a = document.createElement('a'); a.href = url; a.download = 'adressen-ohne-email.csv';
+    var a = document.createElement('a'); a.href = url; a.download = 'adressen-ohne-email.txt';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
   }
