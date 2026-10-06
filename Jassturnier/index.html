@@ -847,21 +847,33 @@ function buildAliasMap(players){
 // Nach Runde 2: echte Reihenfolge, aber nur mit Decknamen und ohne Punkte.
 // Die Zuordnung Deckname -> Person kennt niemand; sie wird erst in der Schlussrangliste aufgelöst,
 // dort sieht man dann auch, wie sich jeder Deckname gegenüber diesem Stand verändert hat.
-function anonRankingTableHtml(tourn){
+function anonRankingTableHtml(tourn, withTrend){
   const list = rankedList(tourn);
   const alias = buildAliasMap(tourn.players);
+  const prevRank = {};
+  if(withTrend){
+    // Veränderung gegenüber dem Stand nach Runde 2 (= vorherige Decknamen-Rangliste)
+    const prevList = rankedList(tourn, ROUNDS_TOTAL - 1);
+    prevList.forEach((r, i) => { prevRank[r.name] = rankAt(prevList, i, 'total'); });
+  }
   let html = '<div class="fog-wrap"><div class="fog-ticker" id="fog-ticker">' + esc(NEBEL_SPRUECHE[0]) + '</div>';
-  html += '<table class="rangliste"><thead><tr><th>Rang</th><th>Deckname</th></tr></thead><tbody>';
+  html += '<table class="rangliste"><thead><tr><th>Rang</th><th>Deckname</th>' + (withTrend ? '<th>Seit Runde 2</th>' : '') + '</tr></thead><tbody>';
   list.forEach((row, idx) => {
     const rank = rankAt(list, idx, 'total');
     const cls = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
     const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
     const icon = MYSTERY_ICONS[hashStr(row.name) % MYSTERY_ICONS.length];
+    let trendCell = '';
+    if(withTrend){
+      const moved = prevRank[row.name] - rank;
+      const trend = moved > 0 ? '<span class="fog-up">▲ ' + moved + '</span>' : moved < 0 ? '<span class="fog-down">▼ ' + Math.abs(moved) + '</span>' : '<span class="fog-same">＝</span>';
+      trendCell = '<td>' + trend + ' <small class="alias-note">(vorher ' + prevRank[row.name] + ')</small></td>';
+    }
     html += '<tr class="'+cls+'"><td class="rank-num">' + rank + '</td>' +
-      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + '<span class="fog-icon">' + icon + '</span> ' + esc(alias[row.name]) + '</td></tr>';
+      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + '<span class="fog-icon">' + icon + '</span> ' + esc(alias[row.name]) + '</td>' + trendCell + '</tr>';
   });
   html += '</tbody></table>';
-  html += '<p class="fog-hint">🔒 Punkte und echte Namen gibt es erst nach Runde 3 &ndash; dann siehst du auch, wie sich dein Deckname verändert hat.</p></div>';
+  html += '<p class="fog-hint">🔒 ' + (withTrend ? 'Punkte und echte Namen gibt es erst bei der Siegerehrung.' : 'Punkte und echte Namen gibt es erst nach Runde 3 &ndash; dann siehst du auch, wie sich dein Deckname verändert hat.') + '</p></div>';
   return html;
 }
 let fogTimer = null;
@@ -1024,7 +1036,7 @@ function renderRevealCard(){
   }
   back.disabled = stage === 0;
   document.getElementById('reveal-status').textContent = stage === 0
-    ? 'Aktuell: nichts enthüllt (Live-Seite zeigt «Gleich ist es soweit …»).'
+    ? 'Aktuell: nichts enthüllt (Live-Seite zeigt die Decknamen-Rangliste mit Auf- und Absteigern).'
     : stage === 4 ? 'Aktuell: alles enthüllt, der Sieger ist sichtbar.' : 'Aktuell enthüllt: ' + (stage === 1 ? 'Plätze ab 4' : stage === 2 ? 'Plätze ab 3' : 'Plätze ab 2') + '.';
   next.onclick = () => setRevealStage(stage + 1);
   back.onclick = () => setRevealStage(stage - 1);
@@ -1375,9 +1387,9 @@ function renderRanglisteView(){
 
   let title, desc;
   if(allDone){
-    title = stage === 0 ? 'Gleich ist es soweit …' : (stage === 4 ? 'Schlussrangliste' : 'Die Rangliste wird enthüllt …');
+    title = stage === 0 ? 'Rangliste nach Runde 3' : (stage === 4 ? 'Schlussrangliste' : 'Die Rangliste wird enthüllt …');
     desc = stage === 0
-      ? 'Alle Runden sind gespielt. Die Turnierleitung enthüllt gleich die Rangliste.'
+      ? 'Alle Runden sind gespielt. Hier siehst du die Decknamen und wer sich seit Runde 2 verbessert oder verschlechtert hat. Namen und Punkte enthüllt die Turnierleitung gleich.'
       : 'Total aus 3 Runden. Unter jedem Namen steht der Deckname aus dem Nebel, rechts die Veränderung seit Runde 2. Bei Punktegleichstand gleicher Rang.';
   } else if(anonymized){
     title = 'Der grosse Nebel';
@@ -1392,7 +1404,7 @@ function renderRanglisteView(){
   if(completedCount === 0){
     contentEl.innerHTML = '<p class="status-msg">Sobald die erste Runde abgeschlossen ist, erscheint hier die Zwischenrangliste.</p>';
   } else if(drumroll){
-    contentEl.innerHTML = '<div class="fog-wrap"><div class="drumroll"><span class="big">🥁</span></div><div class="fog-ticker" id="fog-ticker">' + esc(NEBEL_SPRUECHE[0]) + '</div></div>';
+    contentEl.innerHTML = anonRankingTableHtml(tourn, true);
     startFogTicker();
   } else if(anonymized){
     contentEl.innerHTML = anonRankingTableHtml(tourn);
