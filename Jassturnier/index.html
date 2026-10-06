@@ -411,9 +411,17 @@ onValue(stateRef, (snap) => {
   if(unsavedTableKeys.size > 0 && state.current && state.current.rounds){
     unsavedTableKeys.forEach(key => {
       const [r, t] = key.split('-').map(Number);
-      if(state.current.rounds[r] && state.current.rounds[r].tables[t] &&
-         incoming.current.rounds && incoming.current.rounds[r] && incoming.current.rounds[r].tables[t]){
-        incoming.current.rounds[r].tables[t] = state.current.rounds[r].tables[t];
+      const local = state.current.rounds[r] && state.current.rounds[r].tables[t];
+      const remote = incoming.current.rounds && incoming.current.rounds[r] && incoming.current.rounds[r].tables && incoming.current.rounds[r].tables[t];
+      const sameTable = local && remote && JSON.stringify([local.team1, local.team2]) === JSON.stringify([remote.team1, remote.team2]);
+      // Auf der Tisch-Seite verfallen lokale Eingaben, sobald die Turnierleitung sperrt; im Admin wird ja gerade an gesperrten Tischen gearbeitet.
+      const lockedForMe = remote && remote.locked && getTischParam() !== null;
+      if(sameTable && !lockedForMe && !!remote.totalMode === !!local.totalMode){
+        remote.games = local.games;
+        remote.totalScore1 = local.totalScore1;
+        remote.totalScore2 = local.totalScore2;
+      } else {
+        unsavedTableKeys.delete(key); // Tisch wurde gesperrt / neu ausgelost -> lokale Eingaben verwerfen
       }
     });
   }
@@ -442,16 +450,15 @@ function normalizeTournament(tourn){
   if(!tourn.rounds) tourn.rounds = [];
   tourn.rounds.forEach(r => {
     if(!r.tables) r.tables = [];
+    if(!Array.isArray(r.tables)) r.tables = Object.values(r.tables);
     if(!r.pause) r.pause = [];
     r.tables.forEach(t => {
-      if(!t.games) t.games = emptyGames();
-      // Firebase speichert leere Arrays/Objekte nicht zuverlässig -> Länge absichern
-      if(t.games.length < GAMES_PER_TABLE){
-        while(t.games.length < GAMES_PER_TABLE) t.games.push({ score1: null, score2: null });
-      }
-      t.games.forEach(g => {
-        if(g.score1 === undefined) g.score1 = null;
-        if(g.score2 === undefined) g.score2 = null;
+      // Firebase speichert keine null-Werte: lückenhafte Spiel-Listen kommen als Array mit null-Einträgen
+      // oder (bei wenigen Einträgen) als Objekt {"2":{...},"7":{...}} zurück -> immer auf 10 Spiele normalisieren.
+      const rawGames = t.games || {};
+      t.games = Array.from({length: GAMES_PER_TABLE}, (_, i) => {
+        const g = rawGames[i] || {};
+        return { score1: g.score1 === undefined ? null : g.score1, score2: g.score2 === undefined ? null : g.score2 };
       });
       if(t.totalMode === undefined) t.totalMode = false;
       if(t.totalScore1 === undefined) t.totalScore1 = null;
@@ -1355,11 +1362,26 @@ function renderTableView(tischNum){
   });
 
   document.getElementById('tv-save-btn').addEventListener('click', function(){
-    unsavedTableKeys.delete(tvKey);
-    // Nur den eigenen Tisch schreiben, damit gleichzeitiges Speichern anderer Tische nicht überschrieben wird.
-    set(ref(db, 'jassturnier/state/current/rounds/' + ridx + '/tables/' + (tischNum - 1)), t);
     const status = document.getElementById('tv-save-status');
-    if(status){ status.textContent = 'Gespeichert ✓'; status.style.color = 'var(--green)'; }
+    const liveRound = state.current.rounds[ridx];
+    const live = liveRound && liveRound.tables[tischNum - 1];
+    const sameTable = live && JSON.stringify([live.team1, live.team2]) === JSON.stringify([t.team1, t.team2]);
+    if(!sameTable || live.locked || live.totalMode || liveRound.complete){
+      unsavedTableKeys.delete(tvKey);
+      if(status){ status.textContent = 'Nicht gespeichert: Der Tisch wurde inzwischen von der Turnierleitung gesperrt oder geändert.'; status.style.color = 'var(--red)'; }
+      setTimeout(boot, 2500);
+      return;
+    }
+    if(status){ status.textContent = 'Speichere …'; status.style.color = 'var(--muted)'; }
+    // Nur die Spiele des eigenen Tisches schreiben: andere Tische und die Sperre der Turnierleitung bleiben unberührt.
+    set(ref(db, 'jassturnier/state/current/rounds/' + ridx + '/tables/' + (tischNum - 1) + '/games'), t.games)
+      .then(() => {
+        unsavedTableKeys.delete(tvKey);
+        if(status){ status.textContent = 'Gespeichert ✓'; status.style.color = 'var(--green)'; }
+      })
+      .catch(err => {
+        if(status){ status.textContent = 'Speichern fehlgeschlagen: ' + err.message + ' – bitte nochmals versuchen.'; status.style.color = 'var(--red)'; }
+      });
   });
 }
 
