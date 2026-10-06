@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Jassturnier Supporter FCEK</title>
+<link rel="icon" type="image/png" href="supporter-logo.png">
 <style>
   :root{
     --navy:#021639;
@@ -28,20 +29,27 @@
     padding:0 0 4rem;
   }
   header{
-    background:var(--navy);
-    color:var(--cream);
-    padding:2.2rem 1.5rem 2.6rem;
-    text-align:center;
+    background:#0b1f3a;
+    color:#fff;
+    padding:1.1rem 1.5rem;
+    border-bottom:5px solid #f5c518;
   }
+  .header-inner{
+    max-width:820px; margin:0 auto; display:flex; align-items:center; gap:1.2rem;
+  }
+  .header-logo{
+    background:#fff; border-radius:12px; padding:6px 10px; flex:none; display:flex;
+  }
+  .header-logo img{height:84px; width:auto; display:block;}
   header h1{
-    font-family:Georgia,'Times New Roman',serif;
+    font-family:Arial,Helvetica,sans-serif;
     font-weight:700;
-    font-size:clamp(1.6rem,4vw,2.4rem);
-    margin:0;
+    font-size:clamp(1.3rem,3.6vw,2rem);
+    line-height:1.2;
+    margin:0 0 .35rem;
   }
   header p.sub{
-    margin:0; color:var(--gold-light); font-size:.95rem;
-    letter-spacing:.04em; text-transform:uppercase;
+    margin:.1rem 0 0; color:#f5c518; font-size:clamp(.85rem,2.4vw,1.05rem); font-weight:700;
   }
   main{max-width:820px; margin:0 auto; padding:0 1.2rem;}
   .card{
@@ -135,17 +143,48 @@
   .tv-totals{margin-top:1rem; padding-top:.8rem; border-top:2px solid var(--navy);}
   .tv-waiting{text-align:center; color:var(--muted); padding:2rem 1rem; font-size:1.05rem;}
   @media(max-width:480px){
-    header{padding:1.6rem 1rem 2rem;}
+    header{padding:.9rem 1rem;}
+    .header-inner{gap:.8rem;}
+    .header-logo img{height:60px;}
     .game-grid-head, .game-row, .table-totals{grid-template-columns:3.2rem 1fr 1fr; gap:.35rem;}
     .game-row input[type=number]{padding:.35rem .2rem; font-size:.9rem;}
   }
+
+  /* Nebel-Rangliste (Spannungsphase nach Runde 2) */
+  .fog-wrap{position:relative;}
+  .fog-ticker{
+    text-align:center; font-style:italic; color:var(--navy); background:#eef1f7; border:1px dashed #9fb0cf;
+    border-radius:6px; padding:.7rem 1rem; margin-bottom:1rem; transition:opacity .4s; min-height:3rem;
+  }
+  table.fog td{vertical-align:middle;}
+  .fog-icon{font-size:1.2rem;}
+  .fog-points{font-family:Georgia,serif; font-weight:700; letter-spacing:.08em; white-space:nowrap;}
+  .fog-q{display:inline-block; color:var(--gold); animation:fogpulse 1.8s ease-in-out infinite;}
+  @keyframes fogpulse{0%,100%{opacity:.35; filter:blur(1px);}50%{opacity:1; filter:blur(0);}}
+  .fog-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.6rem;}
+  .fog-card{display:flex; flex-direction:column; align-items:center; gap:.15rem; text-align:center; background:#fffdf7; border:1px solid var(--line); border-radius:6px; padding:.7rem .4rem; font-weight:600; color:var(--navy);}
+  .fog-card .fog-icon{font-size:1.6rem;}
+  .fog-heat{height:7px; background:#e6e3d3; border-radius:4px; overflow:hidden; min-width:70px;}
+  .fog-heat span{display:block; height:100%; background:linear-gradient(90deg,#4aa3df,#e8a33a,#d6452d); border-radius:4px;}
+  table.fog small{color:var(--muted); font-size:.72rem;}
+  .fog-up{color:var(--green); font-weight:700; font-size:.8rem;}
+  .fog-down{color:var(--red); font-weight:700; font-size:.8rem;}
+  .fog-same{color:var(--muted);}
+  .fog-hint{text-align:center; color:var(--muted); font-size:.85rem; margin:1rem 0 0;}
+  @media(max-width:480px){ table.fog small{display:none;} }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Jassturnier Supporter FCEK</h1>
-  <p class="sub">Schieber &middot; Auslosung &middot; Rangliste</p>
+  <div class="header-inner">
+    <div class="header-logo"><img src="supporter-logo.png" alt="Supporter FCEK"></div>
+    <div>
+      <h1>16. Supporter-Jassturnier</h1>
+      <p class="sub">Freitag, 20. November 2026</p>
+      <p class="sub">Restaurant Schöntal, Ebnat-Kappel</p>
+    </div>
+  </div>
 </header>
 
 <main id="organizer-view">
@@ -198,7 +237,7 @@
 
   <div class="card hidden" id="rangliste-card">
     <h2 id="rangliste-title">Zwischenrangliste</h2>
-    <p class="desc" id="rangliste-desc">Stand nach den abgeschlossenen Runden. Bei Punktegleichstand alphabetisch sortiert.</p>
+    <p class="desc" id="rangliste-desc">Stand nach den abgeschlossenen Runden. Bei Punktegleichstand gleicher Rang (alphabetisch sortiert).</p>
     <table class="rangliste">
       <thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th></tr></thead>
       <tbody id="rangliste-body"></tbody>
@@ -236,10 +275,28 @@ import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebase
 const db = getDatabase(app);
 const stateRef = ref(db, "jassturnier/state");
 
+// Richtige Ansicht sofort zeigen (sonst blitzt bei Tisch-/Ranglisten-Links kurz die Admin-Anmeldung auf).
+(function(){
+  const q = new URLSearchParams(window.location.search);
+  const tisch = parseInt(q.get('tisch'), 10);
+  const view = (q.get('tisch') && !isNaN(tisch) && tisch >= 1) ? 'table-view' : (q.has('rangliste') ? 'rangliste-view' : null);
+  if(!view) return;
+  document.getElementById('organizer-view').classList.add('hidden');
+  document.getElementById(view).classList.remove('hidden');
+  const el = document.getElementById(view === 'table-view' ? 'tv-card' : 'rv-content');
+  if(el && !el.innerHTML.trim()) el.innerHTML = '<p class="status-msg" style="text-align:center;">Lade…</p>';
+})();
+
 const ROUNDS_TOTAL = 3;
 const GAMES_PER_TABLE = 10;
 const GAME_POINTS_TOTAL = 157; // Team A + Team B zusammen pro einzelnem Spiel
 const EXPECTED_TABLE_TOTAL = GAME_POINTS_TOTAL * GAMES_PER_TABLE; // Team A + Team B zusammen über alle Spiele einer Runde (157 x 10 = 1570)
+
+// Spielernamen sind frei eingegeben -> vor dem Einfügen in HTML immer escapen.
+function esc(v){
+  return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function teamNames(arr){ return (arr||[]).map(esc).join(' &amp; '); }
 
 // Trägt bei Eingabe eines Team-Scores automatisch den Gegenwert (157 - Score) im anderen
 // Feld ein und sperrt es, damit die 157-Punkte-Regel pro Spiel nie verletzt werden kann.
@@ -299,6 +356,19 @@ function handleTotalPairInput(changedInput){
 const ADMIN_PASSWORD = '1969'; // hier bei Bedarf ändern
 let adminUnlocked = false;
 let applyingRemote = false;
+let pendingRender = false;
+function isTyping(){
+  const ae = document.activeElement;
+  return !!ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.id !== 'login-password';
+}
+document.addEventListener('focusout', () => {
+  if(!pendingRender) return;
+  setTimeout(() => {
+    if(isTyping()) return;
+    pendingRender = false;
+    applyingRemote = true; boot(); applyingRemote = false;
+  }, 150);
+});
 
 let state = { current: { players: [], rounds: [] }, history: [] };
 const unsavedTableKeys = new Set(); // "ridx-tidx" — Tische mit noch nicht gespeicherten Eingaben
@@ -320,7 +390,8 @@ onValue(stateRef, (snap) => {
   state = incoming;
   normalizeState();
   document.getElementById('sync-status').textContent = 'Verbunden — live synchronisiert';
-  boot();
+  // Nicht neu zeichnen, während jemand gerade tippt (sonst springt der Cursor / die Tastatur schliesst sich).
+  if(isTyping()){ pendingRender = true; } else { boot(); }
   applyingRemote = false;
 }, (err) => {
   document.getElementById('sync-status').textContent = 'Verbindungsfehler: ' + err.message;
@@ -570,11 +641,11 @@ function deleteHistoryEntry(idx){
   render();
 }
 
-function computeTotals(tourn){
+function computeTotals(tourn, maxRounds){
   const totals = {};
   tourn.players.forEach(p => { totals[p] = { rounds:[null,null,null], total:0 }; });
   tourn.rounds.forEach((round, ridx) => {
-    if(!round.complete) return;
+    if(!round.complete || (maxRounds != null && ridx >= maxRounds)) return;
     round.tables.forEach(t => {
       const tt = tableTotals(t);
       t.team1.forEach(p => { totals[p].rounds[ridx] = tt.sum1; });
@@ -588,21 +659,28 @@ function computeTotals(tourn){
   return totals;
 }
 
-function rankedList(tourn){
-  const totals = computeTotals(tourn);
+function rankedList(tourn, maxRounds){
+  const totals = computeTotals(tourn, maxRounds);
   const list = Object.keys(totals).map(name => ({ name, ...totals[name] }));
   list.sort((a,b) => b.total - a.total || a.name.localeCompare(b.name, 'de'));
   return list;
 }
 
+// Punktgleiche Spieler teilen sich denselben Rang (1, 1, 3, ...).
+function rankAt(list, idx, key){
+  let i = idx;
+  while(i > 0 && list[i-1][key] === list[idx][key]) i--;
+  return i + 1;
+}
+
 function rankingTableHtml(list){
   let html = '<table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th></tr></thead><tbody>';
   list.forEach((row, idx) => {
-    const rank = idx + 1;
+    const rank = rankAt(list, idx, 'total');
     const cls = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
     const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
     html += '<tr class="'+cls+'"><td class="rank-num">' + rank + '</td>' +
-      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + row.name + '</td>' +
+      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + esc(row.name) + '</td>' +
       '<td>' + (row.rounds[0]==null?'–':row.rounds[0]) + '</td>' +
       '<td>' + (row.rounds[1]==null?'–':row.rounds[1]) + '</td>' +
       '<td>' + (row.rounds[2]==null?'–':row.rounds[2]) + '</td>' +
@@ -612,17 +690,73 @@ function rankingTableHtml(list){
   return html;
 }
 
-// Anonymisierte Variante der Rangliste (nur Rang + Punkte, keine Namen) -
-// für die Spannungsphase zwischen Runde 2 und Ende Runde 3.
-function anonRankingTableHtml(list){
-  let html = '<table class="rangliste"><thead><tr><th>Rang</th><th>Punkte</th></tr></thead><tbody>';
-  list.forEach((row, idx) => {
-    const rank = idx + 1;
-    const cls = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
-    html += '<tr class="'+cls+'"><td class="rank-num">' + rank + '</td><td><strong>' + row.total + '</strong></td></tr>';
+// ---- Nebel-Rangliste: Spannungsphase nach Runde 2 (keine Namen, keine klaren Punkte) ----
+const DECKNAMEN = [
+  'Schellen-Sheriff','Eichel-Express','Bauern-Baron','Rosen-Rudi','Stöck-Stefan','Weis-Wunder','Trumpf-Tiger','Under-Ueli',
+  'Ober-Otto','König-Kurt','Ass-Assistent','Schilten-Schreck','Matchball-Max','Chreuz-Chrigel','Herz-Heiri','Schaufel-Sepp',
+  'Bock-Bernhard','Stich-Stratege','Gschtudierte Gusti','Kartenhai Karl','Sechsi-Sämi','Banner-Beat','Mogel-Mäge','Schieber-Sandro',
+  'Poker-Face Paul','Chlöpf-Chläus','Fuchs-Fredi','Joker-Jürg','Dreier-Dölf','Neuner-Nelly','Zehner-Zita','Lucky Luzi',
+  'Gschwinde Gerda','Glücks-Gret','Mister Match','Madame Matsch','Stille Stefanie','Trick-Toni','Kaffee-Kari','Weggli-Walter',
+  'Bierdeckel-Beni','Wirtschafts-Werner','Stamm-Hans','Kartenmischer Kobi','Piccolo-Pia','Zwetschgen-Zeno','Rüebli-Roger','Älpler-Aline'
+];
+const NEBEL_SPRUECHE = [
+  'Wer jetzt Punkte zählt, hat schon verloren.',
+  'Wer vorne liegt? Das weiss nur der Nebel.',
+  'Die Rangliste ist im Nebel verschwunden – wie der Schieber nach dem dritten Kaffee Träsch.',
+  'Gerücht: Jemand hat in Runde 2 «aus Versehen» gewonnen.',
+  'Der Wirt weiss alles, sagt aber nichts.',
+  'Tipp: Wer laut «Stöck!» ruft, wird nicht unbedingt Erster.',
+  'Die Punkte sind beim Jassgott zur Prüfung.',
+  'Achtung: Unter den Decknamen sitzt jemand, der gar nicht so harmlos spielt.',
+  'Tiefe Atemzüge helfen. Auch bei einem 157:0.',
+  'Der Nebel lichtet sich erst nach Runde 3.',
+  'Ob Bauer oder Ass – im Nebel sind alle gleich.',
+  'Wer jetzt noch jammert, ist garantiert in den Top 10.',
+  'Kleines Geheimnis: Die Letzten haben am meisten Spass.'
+];
+const MYSTERY_ICONS = ['🎭','🕵️','🦊','🃏','🧙','🦉','🐻','🎩','👻','🦄','🐙','🧛'];
+
+function hashStr(str){
+  let h = 2166136261;
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+// Stabile, eindeutige Decknamen pro Spieler (gleicher Name -> immer gleicher Deckname).
+function buildAliasMap(players){
+  const sorted = players.slice().sort((a,b) => hashStr(a) - hashStr(b) || a.localeCompare(b,'de'));
+  const map = {};
+  sorted.forEach((p, i) => {
+    const base = DECKNAMEN[i % DECKNAMEN.length];
+    map[p] = i < DECKNAMEN.length ? base : base + ' ' + (Math.floor(i / DECKNAMEN.length) + 1);
   });
-  html += '</tbody></table>';
+  return map;
+}
+// Nach Runde 2 wird bewusst NICHTS mehr verraten: keine Reihenfolge, keine Ränge, keine Punkte.
+// Die Decknamen erscheinen in fester, alphabetischer Reihenfolge (nicht nach Punkten sortiert).
+function anonRankingTableHtml(tourn){
+  const alias = buildAliasMap(tourn.players);
+  const entries = tourn.players.map(p => ({ icon: MYSTERY_ICONS[hashStr(p) % MYSTERY_ICONS.length], alias: alias[p] }));
+  entries.sort((a,b) => a.alias.localeCompare(b.alias, 'de'));
+  let html = '<div class="fog-wrap"><div class="fog-ticker" id="fog-ticker">' + esc(NEBEL_SPRUECHE[0]) + '</div>';
+  html += '<div class="fog-grid">';
+  entries.forEach(e => {
+    html += '<div class="fog-card"><span class="fog-icon">' + e.icon + '</span><span>' + esc(e.alias) + '</span><span class="fog-q">???</span></div>';
+  });
+  html += '</div>';
+  html += '<p class="fog-hint">🔒 Wer vorne liegt, bleibt geheim &ndash; Rangliste und Punkte gibt es erst nach Runde 3.</p></div>';
   return html;
+}
+let fogTimer = null;
+function startFogTicker(){
+  if(fogTimer) clearInterval(fogTimer);
+  let i = 0;
+  fogTimer = setInterval(() => {
+    const el = document.getElementById('fog-ticker');
+    if(!el){ clearInterval(fogTimer); fogTimer = null; return; }
+    i = (i + 1) % NEBEL_SPRUECHE.length;
+    el.style.opacity = 0;
+    setTimeout(() => { el.textContent = NEBEL_SPRUECHE[i]; el.style.opacity = 1; }, 400);
+  }, 6000);
 }
 
 // Fun-Statistiken: meiste 157:0-Spiele (Top 3) und höchstes Rundentotal eines Teams.
@@ -671,15 +805,15 @@ function funStatsHtml(tourn){
   } else {
     html += '<table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Anzahl</th></tr></thead><tbody>';
     shutouts.forEach((row, idx) => {
-      const rank = idx + 1;
+      const rank = rankAt(shutouts, idx, 'count');
       const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
-      html += '<tr><td class="rank-num">' + rank + '</td><td>' + (medal?'<span class="medal">'+medal+'</span>':'') + row.name + '</td><td><strong>' + row.count + '</strong></td></tr>';
+      html += '<tr><td class="rank-num">' + rank + '</td><td>' + (medal?'<span class="medal">'+medal+'</span>':'') + esc(row.name) + '</td><td><strong>' + row.count + '</strong></td></tr>';
     });
     html += '</tbody></table>';
   }
   html += '<h3 style="font-family:Georgia,serif; color:var(--navy); font-size:1.05rem; margin:1.2rem 0 .6rem;">Höchstes Rundentotal eines Teams</h3>';
   html += highest.players.length
-    ? '<p class="status-msg" style="font-size:1rem;"><strong>' + highest.players.join(' &amp; ') + '</strong> mit <strong>' + highest.value + ' Punkten</strong> in Runde ' + (highest.round+1) + '</p>'
+    ? '<p class="status-msg" style="font-size:1rem;"><strong>' + highest.players.map(esc).join(' &amp; ') + '</strong> mit <strong>' + highest.value + ' Punkten</strong> in Runde ' + (highest.round+1) + '</p>'
     : '<p class="status-msg">Noch keine Runde abgeschlossen.</p>';
   html += '</div>';
   return html;
@@ -697,20 +831,20 @@ function renderLeaderboard(){
   const allDone = rounds.length === ROUNDS_TOTAL && completedCount === ROUNDS_TOTAL;
   title.textContent = allDone ? 'Schlussrangliste' : 'Zwischenrangliste (nach Runde ' + completedCount + ')';
   desc.textContent = allDone
-    ? 'Total aus 3 Runden. Bei Punktegleichstand alphabetisch sortiert.'
-    : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand alphabetisch sortiert.';
+    ? 'Total aus 3 Runden. Bei Punktegleichstand gleicher Rang (alphabetisch sortiert).'
+    : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand gleicher Rang (alphabetisch sortiert).';
 
   const list = rankedList(state.current);
   body.innerHTML = '';
   list.forEach((row, idx) => {
     const tr = document.createElement('tr');
-    const rank = idx + 1;
+    const rank = rankAt(list, idx, 'total');
     if(rank===1) tr.className='rank1';
     if(rank===2) tr.className='rank2';
     if(rank===3) tr.className='rank3';
     const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
     tr.innerHTML = '<td class="rank-num">' + rank + '</td>' +
-      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + row.name + '</td>' +
+      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + esc(row.name) + '</td>' +
       '<td>' + (row.rounds[0]==null?'–':row.rounds[0]) + '</td>' +
       '<td>' + (row.rounds[1]==null?'–':row.rounds[1]) + '</td>' +
       '<td>' + (row.rounds[2]==null?'–':row.rounds[2]) + '</td>' +
@@ -798,7 +932,7 @@ function render(){
     let html = '<h2>Runde ' + (ridx+1) + '</h2>';
     html += '<span class="round-label">' + (round.complete ? 'Abgeschlossen' : 'Läuft') + ' &middot; ' + GAMES_PER_TABLE + ' Spiele</span>';
     if(round.pause.length > 0){
-      html += '<div class="pause-note">Pausiert diese Runde: ' + round.pause.join(', ') + '</div>';
+      html += '<div class="pause-note">Pausiert diese Runde: ' + round.pause.map(esc).join(', ') + '</div>';
     }
     round.tables.forEach((t, tidx) => {
       const tt = tableTotals(t);
@@ -823,15 +957,15 @@ function render(){
       if(t.totalMode){
         const totalPairOk = t.totalScore1!==null && t.totalScore2!==null && Number(t.totalScore1)+Number(t.totalScore2)===EXPECTED_TABLE_TOTAL;
         html += '<div class="score-row" style="display:grid; grid-template-columns:1fr 8rem; gap:.8rem; align-items:center; padding:.4rem 0;">' +
-          '<span>' + t.team1.join(' &amp; ') + '</span>' +
+          '<span>' + teamNames(t.team1) + '</span>' +
           '<input type="number" inputmode="numeric" min="0" max="'+EXPECTED_TABLE_TOTAL+'" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="1" value="'+(t.totalScore1===null?'':t.totalScore1)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+(adminInputsDisabled?' disabled':'')+'>' +
         '</div>';
         html += '<div class="score-row" style="display:grid; grid-template-columns:1fr 8rem; gap:.8rem; align-items:center; padding:.4rem 0;">' +
-          '<span>' + t.team2.join(' &amp; ') + '</span>' +
+          '<span>' + teamNames(t.team2) + '</span>' +
           '<input type="number" inputmode="numeric" min="0" max="'+EXPECTED_TABLE_TOTAL+'" data-total-round="'+ridx+'" data-total-table="'+tidx+'" data-total-team="2" value="'+(t.totalScore2===null?'':t.totalScore2)+'" placeholder="Total" style="text-align:center; font-weight:700;"'+((totalPairOk||adminInputsDisabled)?' readonly':'')+(adminInputsDisabled?' disabled':'')+'>' +
         '</div>';
       } else {
-        html += '<div class="game-grid-head"><span></span><span>' + t.team1.join(' &amp; ') + '</span><span>' + t.team2.join(' &amp; ') + '</span></div>';
+        html += '<div class="game-grid-head"><span></span><span>' + teamNames(t.team1) + '</span><span>' + teamNames(t.team2) + '</span></div>';
         for(let g=0; g<GAMES_PER_TABLE; g++){
           const game = t.games[g];
           html += '<div class="game-row">';
@@ -1006,12 +1140,17 @@ function renderTableView(tischNum){
 
   let html = '<div class="tv-tischnum">Tisch ' + tischNum + '</div>';
   html += '<div class="tv-round">Runde ' + (ridx+1) + ' von ' + ROUNDS_TOTAL + '</div>';
-  html += '<div class="tv-teams"><div class="tv-team-name">' + t.team1.join(' &amp; ') + '</div><div class="tv-team-name">' + t.team2.join(' &amp; ') + '</div></div>';
+  html += '<div class="tv-teams"><div class="tv-team-name">' + teamNames(t.team1) + '</div><div class="tv-team-name">' + teamNames(t.team2) + '</div></div>';
 
   if(locked){
     html += '<div class="check-note" style="background:#eaf1fb;color:var(--navy);border:1px solid #cfe0f5;">Die Turnierleitung trägt die Punkte für diesen Tisch ein. Hier nur noch zur Ansicht.</div>';
   }
 
+  if(t.totalMode){
+    html += '<div class="check-note" style="background:#eaf1fb;color:var(--navy);border:1px solid #cfe0f5;">Für diesen Tisch trägt die Turnierleitung nur die Gesamtpunktzahl ein. Hier ist nichts zu tun.</div>';
+    card.innerHTML = html;
+    return;
+  }
   for(let g=0; g<GAMES_PER_TABLE; g++){
     const game = t.games[g];
     html += '<div class="tv-game-row">';
@@ -1057,7 +1196,8 @@ function renderTableView(tischNum){
 
   document.getElementById('tv-save-btn').addEventListener('click', function(){
     unsavedTableKeys.delete(tvKey);
-    save();
+    // Nur den eigenen Tisch schreiben, damit gleichzeitiges Speichern anderer Tische nicht überschrieben wird.
+    set(ref(db, 'jassturnier/state/current/rounds/' + ridx + '/tables/' + (tischNum - 1)), t);
     const status = document.getElementById('tv-save-status');
     if(status){ status.textContent = 'Gespeichert ✓'; status.style.color = 'var(--green)'; }
   });
@@ -1083,17 +1223,18 @@ function renderRanglisteView(){
   // Runde offen ist (hier: nach Runde 2) wird anonymisiert, bis alles fertig ist.
   const anonymized = !allDone && completedCount === ROUNDS_TOTAL - 1;
 
-  titleEl.textContent = allDone ? 'Schlussrangliste' : (anonymized ? 'Zwischenstand (anonymisiert)' : (completedCount > 0 ? 'Zwischenrangliste (nach Runde ' + completedCount + ')' : 'Rangliste'));
+  titleEl.textContent = allDone ? 'Schlussrangliste' : (anonymized ? 'Der grosse Nebel' : (completedCount > 0 ? 'Zwischenrangliste (nach Runde ' + completedCount + ')' : 'Rangliste'));
   descEl.textContent = completedCount === 0
     ? 'Runde 1 läuft, noch keine Runde abgeschlossen.'
     : anonymized
-      ? 'Zur Spannung werden bis zur Schlussrangliste keine Namen mehr angezeigt – nur der aktuelle Punktestand pro Rang.'
-      : (allDone ? 'Total aus 3 Runden. Bei Punktegleichstand alphabetisch sortiert.' : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand alphabetisch sortiert.');
+      ? 'Zur Spannung bleibt bis zur Schlussrangliste alles geheim – keine Reihenfolge, keine Punkte. Die Decknamen sind nur Dekoration.'
+      : (allDone ? 'Total aus 3 Runden. Bei Punktegleichstand gleicher Rang (alphabetisch sortiert).' : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand gleicher Rang (alphabetisch sortiert).');
 
   if(completedCount === 0){
     contentEl.innerHTML = '<p class="status-msg">Sobald die erste Runde abgeschlossen ist, erscheint hier die Zwischenrangliste.</p>';
   } else if(anonymized){
-    contentEl.innerHTML = anonRankingTableHtml(rankedList(tourn));
+    contentEl.innerHTML = anonRankingTableHtml(tourn);
+    startFogTicker();
   } else {
     contentEl.innerHTML = rankingTableHtml(rankedList(tourn)) + (allDone ? funStatsHtml(tourn) : '');
   }
