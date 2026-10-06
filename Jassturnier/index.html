@@ -159,9 +159,9 @@
   table.fog td{vertical-align:middle;}
   .fog-icon{font-size:1.2rem;}
   .fog-points{font-family:Georgia,serif; font-weight:700; letter-spacing:.08em; white-space:nowrap;}
-  .fog-q{display:inline-block; color:var(--gold); animation:fogpulse 1.8s ease-in-out infinite;}
+  .fog-q{display:inline-block; color:#a07d00; font-size:.85rem; animation:fogpulse 1.8s ease-in-out infinite;}
   @keyframes fogpulse{0%,100%{opacity:.35; filter:blur(1px);}50%{opacity:1; filter:blur(0);}}
-  .fog-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.6rem;}
+  .fog-grid{transition:opacity .4s; display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.6rem;}
   .fog-card{display:flex; flex-direction:column; align-items:center; gap:.15rem; text-align:center; background:#fffdf7; border:1px solid var(--line); border-radius:6px; padding:.7rem .4rem; font-weight:600; color:var(--navy);}
   .fog-card .fog-icon{font-size:1.6rem;}
   .fog-heat{height:7px; background:#e6e3d3; border-radius:4px; overflow:hidden; min-width:70px;}
@@ -169,6 +169,7 @@
   table.fog small{color:var(--muted); font-size:.72rem;}
   .fog-up{color:var(--green); font-weight:700; font-size:.8rem;}
   .fog-down{color:var(--red); font-weight:700; font-size:.8rem;}
+  .alias-note{color:var(--muted); font-size:.75rem;}
   .fog-same{color:var(--muted);}
   .fog-hint{text-align:center; color:var(--muted); font-size:.85rem; margin:1rem 0 0;}
   @media(max-width:480px){ table.fog small{display:none;} }
@@ -690,6 +691,35 @@ function rankingTableHtml(list){
   return html;
 }
 
+// Schlussrangliste der Live-Seite: Name mit Deckname aus dem Nebel und Positionsveränderung
+// gegenüber dem (bis dahin geheimen) Stand nach Runde 2.
+function finalRevealTableHtml(tourn){
+  const list = rankedList(tourn);
+  const prevList = rankedList(tourn, ROUNDS_TOTAL - 1);
+  const prevRank = {};
+  prevList.forEach((r, i) => { prevRank[r.name] = rankAt(prevList, i, 'total'); });
+  const alias = buildAliasMap(tourn.players);
+  let html = '<table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th><th>Seit Runde 2</th></tr></thead><tbody>';
+  list.forEach((row, idx) => {
+    const rank = rankAt(list, idx, 'total');
+    const cls = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
+    const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
+    const icon = MYSTERY_ICONS[hashStr(row.name) % MYSTERY_ICONS.length];
+    const moved = prevRank[row.name] - rank;
+    const trend = moved > 0 ? '<span class="fog-up">▲ ' + moved + '</span>' : moved < 0 ? '<span class="fog-down">▼ ' + Math.abs(moved) + '</span>' : '<span class="fog-same">＝</span>';
+    html += '<tr class="'+cls+'"><td class="rank-num">' + rank + '</td>' +
+      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + esc(row.name) +
+        '<br><small class="alias-note">' + icon + ' ' + esc(alias[row.name]) + '</small></td>' +
+      '<td>' + (row.rounds[0]==null?'–':row.rounds[0]) + '</td>' +
+      '<td>' + (row.rounds[1]==null?'–':row.rounds[1]) + '</td>' +
+      '<td>' + (row.rounds[2]==null?'–':row.rounds[2]) + '</td>' +
+      '<td><strong>' + row.total + '</strong></td>' +
+      '<td>' + trend + ' <small class="alias-note">(vorher ' + prevRank[row.name] + ')</small></td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
 // ---- Nebel-Rangliste: Spannungsphase nach Runde 2 (keine Namen, keine klaren Punkte) ----
 const DECKNAMEN = [
   'Schellen-Sheriff','Eichel-Express','Bauern-Baron','Rosen-Rudi','Stöck-Stefan','Weis-Wunder','Trumpf-Tiger','Under-Ueli',
@@ -731,19 +761,27 @@ function buildAliasMap(players){
   });
   return map;
 }
-// Nach Runde 2 wird bewusst NICHTS mehr verraten: keine Reihenfolge, keine Ränge, keine Punkte.
-// Die Decknamen erscheinen in fester, alphabetischer Reihenfolge (nicht nach Punkten sortiert).
+// Nach Runde 2 wird bewusst NICHTS mehr verraten: weder Reihenfolge noch Punkte.
+// Die Decknamen werden laufend zufällig neu gemischt und bekommen Fantasie-"Punkte" (reiner Quatsch,
+// hat mit dem echten Stand nichts zu tun) - so kann niemand aus seinen eigenen Rundenpunkten auf den Stand schliessen.
+const FANTASIE_PUNKTE = [
+  '7 Weggli','√Träsch','∞ Käse-Punkte','42 Stöck','12 Bierdeckel','3 Chnöpfli','½ Pokal','ca. ein Haufen',
+  'Fr. 5.– Trinkgeld','genug','zu viel','bitte warten','Ø Butterzopf','99 Luftballons','Wurzel aus Rösti','1 Schlückli',
+  '0,5 Promille','100% Bauchgefühl','ein paar','Mehrere Zöpfe','Quark²','5 vor 12','8 Stämmige','Glückszahl ??'
+];
+let fogEntries = [];
+function fogCardsHtml(){
+  const pool = shuffle(FANTASIE_PUNKTE);
+  return shuffle(fogEntries).map((e, i) =>
+    '<div class="fog-card"><span class="fog-icon">' + e.icon + '</span><span>' + esc(e.alias) + '</span><span class="fog-q">' + esc(pool[i % pool.length]) + '</span></div>'
+  ).join('');
+}
 function anonRankingTableHtml(tourn){
   const alias = buildAliasMap(tourn.players);
-  const entries = tourn.players.map(p => ({ icon: MYSTERY_ICONS[hashStr(p) % MYSTERY_ICONS.length], alias: alias[p] }));
-  entries.sort((a,b) => a.alias.localeCompare(b.alias, 'de'));
+  fogEntries = tourn.players.map(p => ({ icon: MYSTERY_ICONS[hashStr(p) % MYSTERY_ICONS.length], alias: alias[p] }));
   let html = '<div class="fog-wrap"><div class="fog-ticker" id="fog-ticker">' + esc(NEBEL_SPRUECHE[0]) + '</div>';
-  html += '<div class="fog-grid">';
-  entries.forEach(e => {
-    html += '<div class="fog-card"><span class="fog-icon">' + e.icon + '</span><span>' + esc(e.alias) + '</span><span class="fog-q">???</span></div>';
-  });
-  html += '</div>';
-  html += '<p class="fog-hint">🔒 Wer vorne liegt, bleibt geheim &ndash; Rangliste und Punkte gibt es erst nach Runde 3.</p></div>';
+  html += '<div class="fog-grid" id="fog-grid">' + fogCardsHtml() + '</div>';
+  html += '<p class="fog-hint">🔒 Wer vorne liegt, bleibt geheim &ndash; Rangliste und Punkte gibt es erst nach Runde 3.<br>Reihenfolge und «Punkte» oben sind reiner Spass und werden laufend neu gemischt.</p></div>';
   return html;
 }
 let fogTimer = null;
@@ -752,11 +790,16 @@ function startFogTicker(){
   let i = 0;
   fogTimer = setInterval(() => {
     const el = document.getElementById('fog-ticker');
+    const grid = document.getElementById('fog-grid');
     if(!el){ clearInterval(fogTimer); fogTimer = null; return; }
     i = (i + 1) % NEBEL_SPRUECHE.length;
     el.style.opacity = 0;
-    setTimeout(() => { el.textContent = NEBEL_SPRUECHE[i]; el.style.opacity = 1; }, 400);
-  }, 6000);
+    if(grid) grid.style.opacity = 0;
+    setTimeout(() => {
+      el.textContent = NEBEL_SPRUECHE[i]; el.style.opacity = 1;
+      if(grid){ grid.innerHTML = fogCardsHtml(); grid.style.opacity = 1; }
+    }, 400);
+  }, 5000);
 }
 
 // Fun-Statistiken: meiste 157:0-Spiele (Top 3) und höchstes Rundentotal eines Teams.
@@ -1228,7 +1271,7 @@ function renderRanglisteView(){
     ? 'Runde 1 läuft, noch keine Runde abgeschlossen.'
     : anonymized
       ? 'Zur Spannung bleibt bis zur Schlussrangliste alles geheim – keine Reihenfolge, keine Punkte. Die Decknamen sind nur Dekoration.'
-      : (allDone ? 'Total aus 3 Runden. Bei Punktegleichstand gleicher Rang (alphabetisch sortiert).' : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand gleicher Rang (alphabetisch sortiert).');
+      : (allDone ? 'Total aus 3 Runden. Unter jedem Namen steht der Deckname aus dem Nebel, rechts siehst du die Veränderung seit Runde 2. Bei Punktegleichstand gleicher Rang.' : 'Live-Stand nach den bisher abgeschlossenen Runden. Bei Punktegleichstand gleicher Rang (alphabetisch sortiert).');
 
   if(completedCount === 0){
     contentEl.innerHTML = '<p class="status-msg">Sobald die erste Runde abgeschlossen ist, erscheint hier die Zwischenrangliste.</p>';
@@ -1236,7 +1279,7 @@ function renderRanglisteView(){
     contentEl.innerHTML = anonRankingTableHtml(tourn);
     startFogTicker();
   } else {
-    contentEl.innerHTML = rankingTableHtml(rankedList(tourn)) + (allDone ? funStatsHtml(tourn) : '');
+    contentEl.innerHTML = (allDone ? finalRevealTableHtml(tourn) + funStatsHtml(tourn) : rankingTableHtml(rankedList(tourn)));
   }
 }
 </script>
