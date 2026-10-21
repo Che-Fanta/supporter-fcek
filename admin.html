@@ -153,7 +153,7 @@
       <div class="stat"><div class="val" id="statEinzel">–</div><div class="lbl">Gesamt Einzel</div></div>
       <div class="stat"><div class="val" id="statPaar">–</div><div class="lbl">Gesamt Paar</div></div>
       <div class="stat"><div class="val" id="statPersonen">–</div><div class="lbl">Total Mitglieder (Personen)</div></div>
-      <div class="stat"><div class="val" id="statAktiv">–</div><div class="lbl">Aktiv</div></div>
+      <div class="stat"><div class="val" id="statInaktiv">–</div><div class="lbl">Inaktiv (nicht mitgezählt)</div></div>
       <div class="stat"><div class="val" id="statBezahlt">–</div><div class="lbl">Beitrag bezahlt</div></div>
     </div>
     <div class="card">
@@ -545,14 +545,15 @@
 
   // ---------- Daten / Tabelle ----------
   function updateStats() {
-    document.getElementById('statTotal').textContent = allMembers.length;
-    var einzelN = allMembers.filter(function(m) { return m.typ === 'Einzel'; }).length;
-    var paarN = allMembers.filter(function(m) { return m.typ === 'Paar'; }).length;
+    var aktive = allMembers.filter(function(m) { return m.status !== 'Inaktiv'; });
+    document.getElementById('statTotal').textContent = aktive.length;
+    var einzelN = aktive.filter(function(m) { return m.typ === 'Einzel'; }).length;
+    var paarN = aktive.filter(function(m) { return m.typ === 'Paar'; }).length;
     document.getElementById('statEinzel').textContent = einzelN;
     document.getElementById('statPaar').textContent = paarN;
     document.getElementById('statPersonen').textContent = einzelN + (paarN * 2);
-    document.getElementById('statAktiv').textContent = allMembers.filter(function(m) { return m.status === 'Aktiv'; }).length;
-    document.getElementById('statBezahlt').textContent = allMembers.filter(function(m) { return m.beitragBezahlt === 'Ja'; }).length;
+    document.getElementById('statInaktiv').textContent = allMembers.length - aktive.length;
+    document.getElementById('statBezahlt').textContent = aktive.filter(function(m) { return m.beitragBezahlt === 'Ja'; }).length;
   }
 
   function getFilteredMembers() {
