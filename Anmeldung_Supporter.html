@@ -30,6 +30,16 @@
   .success-screen { text-align: center; padding: 20px 0; }
   .success-screen .icon { font-size: 2.5rem; margin-bottom: 8px; }
   .beitrag-info { background: #f0f4ff; border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; color: #444; margin-top: 14px; }
+  .made-by { text-align: center; margin: 2.5rem 0 1rem; }
+  .made-by a { display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.45rem 1rem 0.45rem 0.5rem; background: white; border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(0,29,59,0.15); text-decoration: none; transition: box-shadow 0.2s, transform 0.2s; }
+  .made-by a:hover { box-shadow: 0 3px 10px rgba(0,29,59,0.25); transform: translateY(-1px); }
+  .made-by img { height: 34px; }
+  .made-by .txt { display: flex; flex-direction: column; line-height: 1.1; text-align: left; }
+  .made-by small { color: #888; font-size: 0.72rem; }
+  .made-by strong { font-size: 1.05rem; letter-spacing: 0.04em; color: #2B221C; font-weight: 800; }
+  .made-by strong span { color: #A63D1C; }
+  @media print { .made-by { display: none; } }
 </style>
 </head>
 <body>
@@ -91,6 +101,12 @@
     </div>
   </div>
 </div>
+<footer class="made-by">
+  <a href="https://webschmiede.ch" target="_blank" rel="noopener" title="Webschmiede – Websites für Vereine und KMU">
+    <img src="webschmiede-icon.svg" alt="" /><span class="txt"><small>made by</small><strong><span>WEB</span>SCHMIEDE</strong></span>
+  </a>
+</footer>
+
 <script>
   const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRdnWSMsIVCi9hx2vqC83zSxaF1jZPU0IhLq5MmxHwk_GgmtNWFJHU4U8nhqYPmm-rEQ/exec";
   var currentTyp = 'Einzel';
