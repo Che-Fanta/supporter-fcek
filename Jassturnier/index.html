@@ -295,6 +295,7 @@
 </main>
 
 <main id="table-view" class="hidden">
+  <div class="check-note check-bad hidden" id="tv-conn">Keine Verbindung. Punkte können gerade nicht gespeichert werden. Bitte WLAN oder Mobilnetz prüfen.</div>
   <div class="card" id="tv-card"></div>
 </main>
 
@@ -316,7 +317,7 @@
 
 <script type="module">
 import { app } from "./firebase-config.js";
-import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const db = getDatabase(app);
 const stateRef = ref(db, "jassturnier/state");
@@ -449,6 +450,15 @@ onValue(stateRef, (snap) => {
   applyingRemote = false;
 }, (err) => {
   document.getElementById('sync-status').textContent = 'Verbindungsfehler: ' + err.message;
+});
+
+// Verbindungshinweis auf der Tisch-Seite; kurze Aussetzer und der Seitenstart lösen ihn nicht aus.
+let connHintTimer = setTimeout(showConnHint, 3000);
+function showConnHint(){ document.getElementById('tv-conn').classList.remove('hidden'); }
+onValue(ref(db, '.info/connected'), (snap) => {
+  clearTimeout(connHintTimer);
+  if(snap.val() === true){ document.getElementById('tv-conn').classList.add('hidden'); }
+  else { connHintTimer = setTimeout(showConnHint, 3000); }
 });
 
 function markUnsaved(r, t){
@@ -601,12 +611,14 @@ function tableTotals(t){
   return { sum1, sum2, total: sum1+sum2, filled };
 }
 
-function totalsRowHtml(tt, isBad){
+function totalsRowHtml(tt, isBad, unsaved){
   let html = '<span class="tt-label">Total (' + tt.filled + '/' + GAMES_PER_TABLE + ')</span>';
   html += '<span class="tt-val">' + tt.sum1 + '</span>';
   html += '<span class="tt-val">' + tt.sum2 + '</span>';
   if(tt.filled === GAMES_PER_TABLE){
-    if(isBad){
+    if(unsaved){
+      html += '<div class="check-note check-bad">Noch nicht gespeichert &ndash; bitte &laquo;Punkte speichern&raquo; drücken.</div>';
+    } else if(isBad){
       html += '<div class="check-note check-bad">Kontrolle: ' + tt.total.toLocaleString('de-CH') + ' statt ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH') + ' Punkte über ' + GAMES_PER_TABLE + ' Spiele &ndash; bitte korrigieren.</div>';
     } else {
       html += '<div class="check-note check-ok">Kontrolle OK &middot; ' + tt.total.toLocaleString('de-CH') + ' Punkte über ' + GAMES_PER_TABLE + ' Spiele.</div>';
@@ -1298,6 +1310,37 @@ function findActiveTableRound(tischNum){
   return null;
 }
 
+// Statusmeldung der Tisch-Seite: liegt ausserhalb des DOM, damit sie das Neuzeichnen übersteht.
+let tvStatus = { key: null, text: '', color: '' };
+function setTvStatus(key, text, color){
+  tvStatus = { key, text, color };
+  applyTvStatus(key);
+}
+function applyTvStatus(key){
+  const el = document.getElementById('tv-save-status');
+  if(!el) return;
+  const current = tvStatus.key === key;
+  el.textContent = current ? tvStatus.text : '';
+  el.style.color = current ? tvStatus.color : '';
+}
+
+// Ungespeicherte Eingaben überleben so auch ein Neuladen oder einen vom Handy beendeten Tab.
+function tvDraftKey(tischNum){ return 'jassturnier-entwurf-' + tischNum; }
+function tvWriteDraft(tischNum, t, ridx){
+  try{ localStorage.setItem(tvDraftKey(tischNum), JSON.stringify({ ridx, teams: [t.team1, t.team2], games: t.games })); }catch(e){}
+}
+function tvReadDraft(tischNum, t, ridx){
+  try{
+    const d = JSON.parse(localStorage.getItem(tvDraftKey(tischNum)));
+    return d && d.ridx === ridx && JSON.stringify(d.teams) === JSON.stringify([t.team1, t.team2]) ? d.games : null;
+  }catch(e){ return null; }
+}
+function tvClearDraft(tischNum){
+  try{ localStorage.removeItem(tvDraftKey(tischNum)); }catch(e){}
+}
+
+let tvEditCount = 0; // erkennt Eingaben, die während eines laufenden Speicherns dazukommen
+
 function renderTableView(tischNum){
   const card = document.getElementById('tv-card');
   const rounds = state.current.rounds;
@@ -1315,11 +1358,21 @@ function renderTableView(tischNum){
   }
   const { round, ridx } = found;
   const t = round.tables[tischNum - 1];
+  const locked = !!t.locked;
+  const tvKey = ridx + '-' + (tischNum - 1);
+
+  const draft = tvReadDraft(tischNum, t, ridx);
+  if(locked || t.totalMode){
+    tvClearDraft(tischNum);
+  } else if(draft && !unsavedTableKeys.has(tvKey)){
+    t.games = draft;
+    unsavedTableKeys.add(tvKey);
+    setTvStatus(tvKey, 'Noch nicht gespeichert', 'var(--red)');
+  }
+
   const tt = tableTotals(t);
   const allFilled = tt.filled === GAMES_PER_TABLE;
   const isBad = allFilled && tt.total !== EXPECTED_TABLE_TOTAL;
-
-  const locked = !!t.locked;
 
   let html = '<div class="tv-tischnum">Tisch ' + tischNum + '</div>';
   html += '<div class="tv-round">Runde ' + (ridx+1) + ' von ' + ROUNDS_TOTAL + '</div>';
@@ -1344,7 +1397,7 @@ function renderTableView(tischNum){
     html += '</div>';
   }
 
-  html += '<div class="tv-totals" id="tv-totals">' + totalsRowHtml(tt, isBad) + '</div>';
+  html += '<div class="tv-totals" id="tv-totals">' + totalsRowHtml(tt, isBad, unsavedTableKeys.has(tvKey)) + '</div>';
   if(locked){
     html += '<p class="status-msg" style="margin-top:.8rem; text-align:center;">Gesperrt durch die Turnierleitung.</p>';
   } else {
@@ -1354,49 +1407,90 @@ function renderTableView(tischNum){
   }
 
   card.innerHTML = html;
-  const tvKey = ridx + '-' + (tischNum - 1);
+  applyTvStatus(tvKey);
 
   if(locked){
     unsavedTableKeys.delete(tvKey);
     return;
   }
 
+  const teams = JSON.stringify([t.team1, t.team2]);
+  // Immer den aktuellen Stand nehmen: jedes Update von Firebase ersetzt die Objekte in state,
+  // Eingaben auf dem beim Zeichnen gemerkten t würden beim nächsten Neuzeichnen verschwinden.
+  function liveTable(){
+    const liveRound = state.current.rounds[ridx];
+    const live = liveRound && liveRound.tables[tischNum - 1];
+    const sameTable = live && JSON.stringify([live.team1, live.team2]) === teams;
+    return (!sameTable || live.locked || live.totalMode || liveRound.complete) ? null : live;
+  }
+  function showTotals(live){
+    const tt2 = tableTotals(live);
+    const bad2 = tt2.filled === GAMES_PER_TABLE && tt2.total !== EXPECTED_TABLE_TOTAL;
+    const slot = document.getElementById('tv-totals');
+    if(slot) slot.innerHTML = totalsRowHtml(tt2, bad2, unsavedTableKeys.has(tvKey));
+  }
+  function rejectSave(){
+    unsavedTableKeys.delete(tvKey);
+    tvClearDraft(tischNum);
+    setTvStatus(tvKey, 'Nicht gespeichert: Der Tisch wurde inzwischen von der Turnierleitung gesperrt oder geändert.', 'var(--red)');
+    setTimeout(boot, 2500);
+  }
+
   card.querySelectorAll('input[type=number]').forEach(inp => {
     inp.addEventListener('input', function(){
-      const g = Number(this.dataset.game);
-      const game = t.games[g];
-      handleGamePairInput(this, game, '.tv-game-row');
-      const tt2 = tableTotals(t);
-      const filled2 = tt2.filled === GAMES_PER_TABLE;
-      const bad2 = filled2 && tt2.total !== EXPECTED_TABLE_TOTAL;
-      const slot = document.getElementById('tv-totals');
-      if(slot) slot.innerHTML = totalsRowHtml(tt2, bad2);
+      const live = liveTable();
+      if(!live){
+        // Tisch inzwischen gesperrt, neu ausgelost oder Runde abgeschlossen: aktuellen Stand zeigen.
+        unsavedTableKeys.delete(tvKey);
+        tvClearDraft(tischNum);
+        this.blur();
+        pendingRender = false;
+        boot();
+        return;
+      }
+      handleGamePairInput(this, live.games[Number(this.dataset.game)], '.tv-game-row');
+      tvEditCount++;
+      tvWriteDraft(tischNum, live, ridx);
       unsavedTableKeys.add(tvKey);
-      const status = document.getElementById('tv-save-status');
-      if(status){ status.textContent = 'Noch nicht gespeichert'; status.style.color = 'var(--red)'; }
+      showTotals(live);
+      setTvStatus(tvKey, 'Noch nicht gespeichert', 'var(--red)');
     });
   });
 
   document.getElementById('tv-save-btn').addEventListener('click', function(){
-    const status = document.getElementById('tv-save-status');
-    const liveRound = state.current.rounds[ridx];
-    const live = liveRound && liveRound.tables[tischNum - 1];
-    const sameTable = live && JSON.stringify([live.team1, live.team2]) === JSON.stringify([t.team1, t.team2]);
-    if(!sameTable || live.locked || live.totalMode || liveRound.complete){
-      unsavedTableKeys.delete(tvKey);
-      if(status){ status.textContent = 'Nicht gespeichert: Der Tisch wurde inzwischen von der Turnierleitung gesperrt oder geändert.'; status.style.color = 'var(--red)'; }
-      setTimeout(boot, 2500);
-      return;
-    }
-    if(status){ status.textContent = 'Speichere …'; status.style.color = 'var(--muted)'; }
-    // Nur die Spiele des eigenen Tisches schreiben: andere Tische und die Sperre der Turnierleitung bleiben unberührt.
-    set(ref(db, 'jassturnier/state/current/rounds/' + ridx + '/tables/' + (tischNum - 1) + '/games'), t.games)
-      .then(() => {
+    const live = liveTable();
+    if(!live){ rejectSave(); return; }
+    setTvStatus(tvKey, 'Speichere …', 'var(--muted)');
+    const games = live.games;
+    const editsAtSave = tvEditCount;
+    const slowHint = setTimeout(() => {
+      if(tvStatus.key === tvKey && tvStatus.text === 'Speichere …'){
+        setTvStatus(tvKey, 'Noch nicht gespeichert: keine Verbindung. Sobald das Netz zurück ist, wird automatisch gespeichert.', 'var(--red)');
+      }
+    }, 5000);
+    // Der Server prüft beim Speichern, ob der Tisch noch offen ist. Ein Handy, das erst später wieder
+    // Netz hat, kann so keine gesperrte Runde mehr überschreiben. Schreibt nur die eigenen Spiele.
+    runTransaction(ref(db, 'jassturnier/state/current/rounds/' + ridx), (cur) => {
+      if(cur === null) return cur; // lokal noch nichts bekannt: Firebase ruft mit dem Serverstand erneut auf
+      const table = cur.tables && cur.tables[tischNum - 1];
+      if(!table || cur.complete || table.locked || table.totalMode) return;
+      if(JSON.stringify([table.team1, table.team2]) !== teams) return;
+      table.games = games;
+      return cur;
+    }, { applyLocally: false })
+      .then((result) => {
+        clearTimeout(slowHint);
+        if(!result.committed || !result.snapshot.exists()){ rejectSave(); return; }
+        if(tvEditCount !== editsAtSave){ return; } // neuere Eingaben bleiben als ungespeichert markiert
         unsavedTableKeys.delete(tvKey);
-        if(status){ status.textContent = 'Gespeichert ✓'; status.style.color = 'var(--green)'; }
+        tvClearDraft(tischNum);
+        setTvStatus(tvKey, 'Gespeichert ✓', 'var(--green)');
+        const current = liveTable();
+        if(current) showTotals(current);
       })
       .catch(err => {
-        if(status){ status.textContent = 'Speichern fehlgeschlagen: ' + err.message + ' – bitte nochmals versuchen.'; status.style.color = 'var(--red)'; }
+        clearTimeout(slowHint);
+        setTvStatus(tvKey, 'Speichern fehlgeschlagen: ' + err.message + ' – bitte nochmals versuchen.', 'var(--red)');
       });
   });
 }
