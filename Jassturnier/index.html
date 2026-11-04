@@ -126,6 +126,8 @@
   .qr-item .qr-label{font-family:Georgia,serif; font-weight:700; color:var(--navy); font-size:.95rem;}
   .qr-item .qr-url{font-size:.72rem; color:var(--muted); word-break:break-all; margin-top:.2rem;}
   .sync-status{text-align:center; font-size:.78rem; color:#888; margin:.6rem 0 0;}
+  #conn-hint{position:sticky; top:0; z-index:50; margin:0; border-radius:0; text-align:center;}
+  .table-scroll{overflow-x:auto;}
 
   /* Tisch-Ansicht: möglichst grosse, einfache Eingabe (auch für ältere/wenig technikaffine Spieler) */
   #table-view{max-width:520px;}
@@ -142,6 +144,19 @@
   .tv-game-row input[type=number]{text-align:center; font-size:1.2rem; font-weight:700; padding:.7rem .3rem;}
   .tv-totals{margin-top:1rem; padding-top:.8rem; border-top:2px solid var(--navy);}
   .tv-waiting{text-align:center; color:var(--muted); padding:2rem 1rem; font-size:1.05rem;}
+
+  /* Live-Rangliste: breiter für Beamer, Paarungen der laufenden Runde oben */
+  #rangliste-view{max-width:1400px;}
+  .pairing-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:.7rem;}
+  .pairing{border:1px solid var(--line); border-left:5px solid var(--gold); border-radius:6px; background:#fffdf7; padding:.6rem .8rem;}
+  .pairing.done{border-left-color:var(--green);}
+  .pairing-head{display:flex; justify-content:space-between; align-items:baseline; gap:.5rem; margin-bottom:.3rem;}
+  .pairing-num{font-family:Georgia,serif; font-weight:700; color:var(--navy); font-size:1.25rem;}
+  .pairing-state{font-size:.75rem; color:var(--muted); white-space:nowrap;}
+  .pairing.done .pairing-state{color:var(--green); font-weight:700;}
+  .pairing-team{font-weight:600; font-size:1.05rem; line-height:1.3;}
+  .pairing-vs{font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin:.1rem 0;}
+  @media(min-width:1100px){ .pairing-team{font-size:1.15rem;} }
   @media(max-width:480px){
     header{padding:.9rem 1rem;}
     .header-inner{gap:.8rem;}
@@ -217,6 +232,8 @@
   </div>
 </header>
 
+<div class="check-note check-bad hidden" id="conn-hint">Keine Verbindung. Punkte und Änderungen können gerade nicht gespeichert werden. Bitte WLAN oder Mobilnetz prüfen.</div>
+
 <main id="organizer-view">
 
   <div class="card" id="login-card">
@@ -246,7 +263,7 @@
 
   <div class="card">
     <h2>Live-Rangliste (separate Seite)</h2>
-    <p class="desc">Eigene, schreibgeschützte Seite ohne Passwort &ndash; zum Aufrufen auf einem Beamer/Bildschirm oder zum Verschicken an die Spieler. Zeigt Zwischen-/Schlussrangliste pro Runde und Spieler, aktualisiert sich live.</p>
+    <p class="desc">Eigene, schreibgeschützte Seite ohne Passwort &ndash; zum Aufrufen auf einem Beamer/Bildschirm oder zum Verschicken an die Spieler. Zeigt oben die Paarungen der laufenden Runde (wer an welchem Tisch sitzt), darunter Zwischen-/Schlussrangliste pro Runde und Spieler, aktualisiert sich live.</p>
     <div class="row">
       <a class="btn gold" id="rangliste-link" href="?rangliste=1" target="_blank" rel="noopener">Live-Rangliste öffnen ↗</a>
     </div>
@@ -295,11 +312,11 @@
 </main>
 
 <main id="table-view" class="hidden">
-  <div class="check-note check-bad hidden" id="tv-conn">Keine Verbindung. Punkte können gerade nicht gespeichert werden. Bitte WLAN oder Mobilnetz prüfen.</div>
   <div class="card" id="tv-card"></div>
 </main>
 
 <main id="rangliste-view" class="hidden">
+  <div class="card hidden" id="rv-pairings"></div>
   <div class="card">
     <h2 id="rv-title">Rangliste</h2>
     <p class="desc" id="rv-desc"></p>
@@ -317,7 +334,7 @@
 
 <script type="module">
 import { app } from "./firebase-config.js";
-import { getDatabase, ref, onValue, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, onValue, set, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const db = getDatabase(app);
 const stateRef = ref(db, "jassturnier/state");
@@ -402,7 +419,6 @@ function handleTotalPairInput(changedInput){
 }
 const ADMIN_PASSWORD = '1969'; // hier bei Bedarf ändern
 let adminUnlocked = false;
-let applyingRemote = false;
 let pendingRender = false;
 function isTyping(){
   const ae = document.activeElement;
@@ -413,7 +429,7 @@ document.addEventListener('focusout', () => {
   setTimeout(() => {
     if(isTyping()) return;
     pendingRender = false;
-    applyingRemote = true; boot(); applyingRemote = false;
+    boot();
   }, 150);
 });
 
@@ -421,7 +437,6 @@ let state = { current: { players: [], rounds: [] }, history: [] };
 const unsavedTableKeys = new Set(); // "ridx-tidx" — Tische mit noch nicht gespeicherten Eingaben
 
 onValue(stateRef, (snap) => {
-  applyingRemote = true;
   const incoming = snap.exists() ? snap.val() : { current: { players: [], rounds: [] }, history: [] };
   if(!incoming.current) incoming.current = { players: [], rounds: [] };
   // Tische mit ungespeicherten lokalen Eingaben nicht durch entfernte Änderungen überschreiben
@@ -444,22 +459,39 @@ onValue(stateRef, (snap) => {
   }
   state = incoming;
   normalizeState();
-  document.getElementById('sync-status').textContent = 'Verbunden — live synchronisiert';
   // Nicht neu zeichnen, während jemand gerade tippt (sonst springt der Cursor / die Tastatur schliesst sich).
   if(isTyping()){ pendingRender = true; } else { boot(); }
-  applyingRemote = false;
 }, (err) => {
   document.getElementById('sync-status').textContent = 'Verbindungsfehler: ' + err.message;
 });
 
-// Verbindungshinweis auf der Tisch-Seite; kurze Aussetzer und der Seitenstart lösen ihn nicht aus.
+// Verbindungshinweis; kurze Aussetzer und der Seitenstart lösen ihn nicht aus.
+let connected = false;
 let connHintTimer = setTimeout(showConnHint, 3000);
-function showConnHint(){ document.getElementById('tv-conn').classList.remove('hidden'); }
+function showConnHint(){
+  document.getElementById('conn-hint').classList.remove('hidden');
+  document.getElementById('sync-status').textContent = 'Keine Verbindung';
+}
 onValue(ref(db, '.info/connected'), (snap) => {
+  connected = snap.val() === true;
   clearTimeout(connHintTimer);
-  if(snap.val() === true){ document.getElementById('tv-conn').classList.add('hidden'); }
-  else { connHintTimer = setTimeout(showConnHint, 3000); }
+  if(connected){
+    document.getElementById('conn-hint').classList.add('hidden');
+    document.getElementById('sync-status').textContent = 'Verbunden — live synchronisiert';
+  } else {
+    connHintTimer = setTimeout(showConnHint, 3000);
+  }
 });
+
+// Ohne Verbindung keine Admin-Aktionen: Firebase würde sie zurückhalten und später
+// über das schreiben, was die Tische inzwischen gespeichert haben.
+const ADMIN_WRITE_CONTROLS = '#start-btn, #reset-btn, #delete-current-btn, #reveal-next-btn, #reveal-back-btn, [data-toggle-total], [data-toggle-lock], [data-save-table], [data-finish], [data-redraw], [data-hist-delete]';
+document.getElementById('admin-content').addEventListener('click', (e) => {
+  if(connected || !e.target.closest(ADMIN_WRITE_CONTROLS)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  alert('Keine Verbindung – diese Aktion wurde nicht ausgeführt. Bitte warten, bis die Verbindung wieder steht.');
+}, true);
 
 function markUnsaved(r, t){
   unsavedTableKeys.add(r + '-' + t);
@@ -501,9 +533,11 @@ function normalizeState(){
   state.history.forEach(normalizeTournament);
 }
 
-function save(){
-  if(applyingRemote) return;
-  set(stateRef, state);
+// Admin schreibt nur, was er ändert: Punkte, die Tische gleichzeitig speichern, bleiben so unberührt.
+const CURRENT_PATH = 'jassturnier/state/current';
+function tableRef(r, t){ return ref(db, CURRENT_PATH + '/rounds/' + r + '/tables/' + t); }
+function tablePatch(table){
+  return { games: table.games, totalMode: table.totalMode, totalScore1: table.totalScore1, totalScore2: table.totalScore2 };
 }
 
 function getTischParam(){
@@ -587,7 +621,7 @@ function startTournament(){
   if(unique.length < 4){ alert('Bitte mindestens 4 Spieler erfassen.'); return; }
   state.current.players = unique;
   state.current.rounds = [drawRound(unique)];
-  save();
+  set(ref(db, CURRENT_PATH), state.current);
   render();
 }
 
@@ -658,10 +692,21 @@ function finishRound(roundIdx){
     round.tables.forEach(t => { const tt = tableTotals(t); allScores.push(tt.sum1, tt.sum2); });
     round.pauseAvg = allScores.length ? Math.round(allScores.reduce((a,b)=>a+b,0)/allScores.length) : 0;
   }
+  const patch = { [roundIdx + '/complete']: true };
+  if(round.pause.length > 0) patch[roundIdx + '/pauseAvg'] = round.pauseAvg;
+  // Noch nicht einzeln gespeicherte Admin-Eingaben dieser Runde gehören zum Abschluss.
+  round.tables.forEach((t, tidx) => {
+    const key = roundIdx + '-' + tidx;
+    if(!unsavedTableKeys.has(key)) return;
+    unsavedTableKeys.delete(key);
+    Object.entries(tablePatch(t)).forEach(([field, value]) => { patch[roundIdx + '/tables/' + tidx + '/' + field] = value; });
+  });
   if(roundIdx + 1 < ROUNDS_TOTAL){
-    state.current.rounds.push(drawRound(state.current.players.slice()));
+    const nextRound = drawRound(state.current.players.slice());
+    state.current.rounds.push(nextRound);
+    patch[roundIdx + 1] = nextRound;
   }
-  save();
+  update(ref(db, CURRENT_PATH + '/rounds'), patch);
   render();
 }
 
@@ -669,7 +714,7 @@ function redrawRound(roundIdx){
   if(!confirm('Diese Runde wirklich neu auslosen? Bereits eingetragene Punkte dieser Runde gehen verloren.')) return;
   state.current.rounds[roundIdx] = drawRound(state.current.players.slice());
   unsavedTableKeys.forEach(key => { if(key.startsWith(roundIdx+'-')) unsavedTableKeys.delete(key); });
-  save();
+  set(ref(db, CURRENT_PATH + '/rounds/' + roundIdx), state.current.rounds[roundIdx]);
   render();
 }
 
@@ -687,7 +732,7 @@ function resetTournament(){
   archiveCurrentTournament();
   state.current = { players: [], rounds: [] };
   document.getElementById('players-input').value = '';
-  save();
+  update(ref(db, 'jassturnier/state'), { current: null, history: state.history });
   render();
 }
 
@@ -695,14 +740,14 @@ function deleteCurrentTournament(){
   if(!confirm('Achtung: Das aktuelle Turnier wird ENDGÜLTIG gelöscht, ohne in die Historie zu wandern. Wirklich fortfahren?')) return;
   state.current = { players: [], rounds: [] };
   document.getElementById('players-input').value = '';
-  save();
+  set(ref(db, CURRENT_PATH), null);
   render();
 }
 
 function deleteHistoryEntry(idx){
   if(!confirm('Dieses archivierte Turnier wirklich endgültig löschen? Das kann nicht rückgängig gemacht werden.')) return;
   state.history.splice(idx, 1);
-  save();
+  set(ref(db, 'jassturnier/state/history'), state.history);
   render();
 }
 
@@ -739,7 +784,7 @@ function rankAt(list, idx, key){
 }
 
 function rankingTableHtml(list){
-  let html = '<table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th></tr></thead><tbody>';
+  let html = '<div class="table-scroll"><table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th></tr></thead><tbody>';
   list.forEach((row, idx) => {
     const rank = rankAt(list, idx, 'total');
     const cls = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
@@ -751,7 +796,7 @@ function rankingTableHtml(list){
       '<td>' + (row.rounds[2]==null?'–':row.rounds[2]) + '</td>' +
       '<td><strong>' + row.total + '</strong></td></tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   return html;
 }
 
@@ -760,6 +805,14 @@ const REVEAL_LABELS = ['Plätze ab 4 enthüllen', 'Platz 3 enthüllen', 'Platz 2
 function revealStepOfRank(rank){ return rank >= 4 ? 1 : rank === 3 ? 2 : rank === 2 ? 3 : 4; }
 function allRoundsDone(t){ return t.rounds.length === ROUNDS_TOTAL && t.rounds.every(r => r.complete); }
 let lastRevealStage = null;
+// Nächste Stufe mit tatsächlich vorhandenen Plätzen (bei Gleichstand fehlt z. B. Platz 2).
+function revealNeighbour(tourn, stage, dir){
+  const list = rankedList(tourn);
+  const steps = new Set(list.map((r, idx) => revealStepOfRank(rankAt(list, idx, 'total'))));
+  let s = stage + dir;
+  while(s > 0 && s < 4 && !steps.has(s)) s += dir;
+  return s;
+}
 
 // Schlussrangliste der Live-Seite: Name mit Deckname aus dem Nebel und Positionsveränderung
 // gegenüber dem (bis dahin geheimen) Stand nach Runde 2. Nur bereits enthüllte Plätze sind sichtbar.
@@ -769,7 +822,7 @@ function finalRevealTableHtml(tourn, stage){
   const prevRank = {};
   prevList.forEach((r, i) => { prevRank[r.name] = rankAt(prevList, i, 'total'); });
   const alias = buildAliasMap(tourn.players);
-  let html = '<table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th><th>Seit Runde 2</th></tr></thead><tbody>';
+  let html = '<div class="table-scroll"><table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th><th>Seit Runde 2</th></tr></thead><tbody>';
   list.forEach((row, idx) => {
     const rank = rankAt(list, idx, 'total');
     const step = revealStepOfRank(rank);
@@ -793,7 +846,7 @@ function finalRevealTableHtml(tourn, stage){
       '<td><strong>' + row.total + '</strong></td>' +
       '<td>' + trend + ' <small class="alias-note">(vorher ' + prevRank[row.name] + ')</small></td></tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
   return html;
 }
 
@@ -940,7 +993,7 @@ function computeShutoutWins(tourn){
   });
   const list = Object.keys(counts).map(name => ({ name, count: counts[name] })).filter(r => r.count > 0);
   list.sort((a,b) => b.count - a.count || a.name.localeCompare(b.name, 'de'));
-  return list.slice(0, 3);
+  return list.filter((r, idx) => rankAt(list, idx, 'count') <= 3);
 }
 
 function computeHighestRoundTotal(tourn){
@@ -1065,7 +1118,7 @@ function renderRevealCard(){
   document.getElementById('reveal-desc').textContent = 'Alle 3 Runden sind abgeschlossen. Die Live-Rangliste bleibt verdeckt, bis du hier Schritt für Schritt enthüllst (Beamer: «Live-Rangliste öffnen»).';
   if(stage < 4){
     next.classList.remove('hidden');
-    next.textContent = REVEAL_LABELS[stage];
+    next.textContent = REVEAL_LABELS[revealNeighbour(t, stage, 1) - 1];
   } else {
     next.classList.add('hidden');
   }
@@ -1073,8 +1126,8 @@ function renderRevealCard(){
   document.getElementById('reveal-status').textContent = stage === 0
     ? 'Aktuell: nichts enthüllt (Live-Seite zeigt die Decknamen-Rangliste mit Auf- und Absteigern).'
     : stage === 4 ? 'Aktuell: alles enthüllt, der Sieger ist sichtbar.' : 'Aktuell enthüllt: ' + (stage === 1 ? 'Plätze ab 4' : stage === 2 ? 'Plätze ab 3' : 'Plätze ab 2') + '.';
-  next.onclick = () => setRevealStage(stage + 1);
-  back.onclick = () => setRevealStage(stage - 1);
+  next.onclick = () => setRevealStage(revealNeighbour(t, stage, 1));
+  back.onclick = () => setRevealStage(revealNeighbour(t, stage, -1));
 }
 function setRevealStage(n){
   n = Math.max(0, Math.min(4, n));
@@ -1230,7 +1283,8 @@ function render(){
       }
 
       table.totalMode = goingToTotal;
-      save();
+      unsavedTableKeys.delete(r + '-' + t);
+      update(tableRef(r, t), tablePatch(table));
       render();
     });
   });
@@ -1242,15 +1296,23 @@ function render(){
         if(!confirm('Tisch ' + (t+1) + ' für die Spieler sperren? Sie können ihre Punkte dann nicht mehr selbst eintragen – nur noch die Turnierleitung hier im Admin-Bereich.')) return;
       }
       table.locked = !table.locked;
-      save();
+      const key = r + '-' + t;
+      const unsaved = unsavedTableKeys.delete(key); // Admin-Eingaben am Tisch gehen mit
+      update(tableRef(r, t), unsaved ? { ...tablePatch(table), locked: table.locked } : { locked: table.locked });
       render();
     });
   });
   roundsContainer.querySelectorAll('[data-save-table]').forEach(btn => {
     btn.addEventListener('click', function(){
       const key = this.dataset.saveTable;
+      const [r, t] = key.split('-').map(Number);
+      const round = state.current.rounds[r];
+      if(round.complete && tableTotals(round.tables[t]).filled < GAMES_PER_TABLE){
+        alert('Diese Runde ist abgeschlossen – bitte alle ' + GAMES_PER_TABLE + ' Spiele vollständig eintragen.');
+        return;
+      }
       unsavedTableKeys.delete(key);
-      save();
+      update(tableRef(r, t), tablePatch(round.tables[t]));
       renderLeaderboard();
       const status = document.getElementById('save-status-'+key);
       if(status){ status.textContent = 'Gespeichert ✓'; status.style.color = 'var(--green)'; }
@@ -1411,6 +1473,7 @@ function renderTableView(tischNum){
 
   if(locked){
     unsavedTableKeys.delete(tvKey);
+    tvStatus = { key: null, text: '', color: '' };
     return;
   }
 
@@ -1487,6 +1550,8 @@ function renderTableView(tischNum){
         setTvStatus(tvKey, 'Gespeichert ✓', 'var(--green)');
         const current = liveTable();
         if(current) showTotals(current);
+        // Fokus raus, sonst bleibt die Seite auf dem iPhone bei offener Tastatur auf der alten Runde stehen.
+        if(card.contains(document.activeElement)) document.activeElement.blur();
       })
       .catch(err => {
         clearTimeout(slowHint);
@@ -1495,12 +1560,43 @@ function renderTableView(tischNum){
   });
 }
 
+// Paarungen der laufenden Runde für die Live-Rangliste (Beamer): wer sitzt an welchem Tisch.
+// Zeigt keine Punkte, verrät also auch in der Nebel-Phase nichts.
+function renderPairings(tourn){
+  const el = document.getElementById('rv-pairings');
+  let ridx = -1;
+  for(let i = tourn.rounds.length - 1; i >= 0; i--){ if(!tourn.rounds[i].complete){ ridx = i; break; } }
+  if(ridx < 0){ el.classList.add('hidden'); el.innerHTML = ''; return; }
+  const round = tourn.rounds[ridx];
+  const doneCount = round.tables.filter(t => tableTotals(t).filled === GAMES_PER_TABLE).length;
+  let html = '<h2>Paarungen Runde ' + (ridx+1) + ' von ' + ROUNDS_TOTAL + '</h2>';
+  html += '<p class="desc">Sucht euren Namen und setzt euch an den Tisch. ' + doneCount + ' von ' + round.tables.length + ' Tischen haben alle ' + GAMES_PER_TABLE + ' Spiele eingetragen.</p>';
+  if(round.pause.length > 0){
+    html += '<div class="pause-note">Pausiert diese Runde: ' + round.pause.map(esc).join(', ') + '</div>';
+  }
+  html += '<div class="pairing-grid">';
+  round.tables.forEach((t, tidx) => {
+    const done = tableTotals(t).filled === GAMES_PER_TABLE;
+    html += '<div class="pairing' + (done ? ' done' : '') + '">' +
+      '<div class="pairing-head"><span class="pairing-num">Tisch ' + (tidx+1) + '</span>' +
+        '<span class="pairing-state">' + (done ? '✓ eingetragen' : 'spielt') + '</span></div>' +
+      '<div class="pairing-team">' + teamNames(t.team1) + '</div>' +
+      '<div class="pairing-vs">gegen</div>' +
+      '<div class="pairing-team">' + teamNames(t.team2) + '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+
 // ---- Live-Rangliste: eigene, schreibgeschützte Ansicht (kein Passwort, z.B. für Beamer) ----
 function renderRanglisteView(){
   const titleEl = document.getElementById('rv-title');
   const descEl = document.getElementById('rv-desc');
   const contentEl = document.getElementById('rv-content');
   const tourn = state.current;
+  renderPairings(tourn);
 
   if(!tourn.players || tourn.players.length === 0){
     titleEl.textContent = 'Rangliste';
