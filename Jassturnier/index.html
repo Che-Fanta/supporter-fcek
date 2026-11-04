@@ -157,6 +157,48 @@
   .pairing-team{font-weight:600; font-size:1.05rem; line-height:1.3;}
   .pairing-vs{font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin:.1rem 0;}
   @media(min-width:1100px){ .pairing-team{font-size:1.15rem;} }
+
+  /* Live-Rangliste auf Beamer im hellen Raum: Beamer können kein Schwarz und waschen helle Töne aus.
+     Darum weisser Grund, fast schwarze, fette Schrift, kräftige statt pastellige Flächen, keine Grautexte. */
+  body.rv{background:#fff; color:#000;}
+  body.rv .header-inner{max-width:1400px;}
+  body.rv .card{border:2px solid #0b1f3a; box-shadow:none; background:#fff;}
+  body.rv .card h2{font-family:Arial,Helvetica,sans-serif; font-weight:800; color:#0b1f3a; font-size:1.5rem;}
+  body.rv .desc, body.rv .status-msg, body.rv .fog-hint{color:#1b2233; font-weight:600;}
+  body.rv small, body.rv .alias-note, body.rv table.fog small{color:#1b2233; font-weight:600;}
+  body.rv table.rangliste th{color:#000; font-weight:800; border-bottom:3px solid #0b1f3a;}
+  body.rv table.rangliste td{color:#000; font-weight:600; border-bottom:1px solid #8a8f99;}
+  body.rv .rank-num{color:#0b1f3a; font-family:Arial,Helvetica,sans-serif; font-weight:800;}
+  body.rv table.rangliste tr.rank1 td{background:#f5c518; color:#000; font-weight:800;}
+  body.rv table.rangliste tr.rank2 td{background:#c3c9d3; color:#000; font-weight:800;}
+  body.rv table.rangliste tr.rank3 td{background:#e3a868; color:#000; font-weight:800;}
+  body.rv tr.locked-row td{background:#dcdcdc; color:#1b2233; font-style:normal;}
+  body.rv .fog-ticker{background:#0b1f3a; color:#fff; border:none; font-style:normal; font-weight:700;}
+  body.rv .fog-up{color:#06702a;}
+  body.rv .fog-down{color:#b3121f;}
+  body.rv .fog-same{color:#1b2233;}
+  body.rv .pause-note{background:#fff; color:#9b0d14; border:2px solid #9b0d14; font-weight:700;}
+  body.rv .pairing{background:#fff; border:2px solid #0b1f3a; border-left:10px solid #f5c518;}
+  body.rv .pairing.done{border-left-color:#1a7a3a;}
+  body.rv .pairing-num{font-family:Arial,Helvetica,sans-serif; font-weight:800; color:#0b1f3a;}
+  body.rv .pairing-team{color:#000; font-weight:700;}
+  body.rv .pairing-vs{color:#1b2233; font-weight:800;}
+  body.rv .pairing-state{background:#0b1f3a; color:#fff; font-weight:700; padding:.1rem .5rem; border-radius:3px;}
+  body.rv .pairing.done .pairing-state{background:#1a7a3a; color:#fff;}
+  /* Grosse Bildschirme / Beamer: alles grösser, damit es auch hinten im Saal lesbar ist */
+  @media(min-width:1000px){
+    body.rv .card h2{font-size:2.1rem;}
+    body.rv .desc{font-size:1.15rem;}
+    body.rv table.rangliste{font-size:1.3rem;}
+    body.rv table.rangliste th{font-size:.95rem;}
+    body.rv table.rangliste td{padding:.5rem .6rem;}
+    body.rv .pairing-num{font-size:1.6rem;}
+    body.rv .pairing-team{font-size:1.35rem;}
+    body.rv .pairing-vs{font-size:.9rem;}
+    body.rv .pairing-state{font-size:.9rem;}
+    body.rv .pairing-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));}
+    body.rv .fog-ticker{font-size:1.3rem;}
+  }
   @media(max-width:480px){
     header{padding:.9rem 1rem;}
     .header-inner{gap:.8rem;}
@@ -345,6 +387,7 @@ const stateRef = ref(db, "jassturnier/state");
   const tisch = parseInt(q.get('tisch'), 10);
   const view = (q.get('tisch') && !isNaN(tisch) && tisch >= 1) ? 'table-view' : (q.has('rangliste') ? 'rangliste-view' : null);
   if(!view) return;
+  if(view === 'rangliste-view') document.body.classList.add('rv');
   document.getElementById('organizer-view').classList.add('hidden');
   document.getElementById(view).classList.remove('hidden');
   const el = document.getElementById(view === 'table-view' ? 'tv-card' : 'rv-content');
