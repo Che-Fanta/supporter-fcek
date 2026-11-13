@@ -341,7 +341,12 @@
   </div>
 
   <div class="card" id="qr-card">
-    <h2>QR-Codes pro Tisch</h2>
+    <button type="button" class="round-toggle" id="qr-toggle" aria-expanded="false">
+      <h2>QR-Codes pro Tisch</h2>
+      <span class="rt-summary">zum Ausdrucken, bleiben für jedes Turnier gleich</span>
+      <span class="rt-chev" aria-hidden="true">▾</span>
+    </button>
+    <div class="round-body hidden" id="qr-body">
     <p class="desc">Statische Codes &ndash; die Links (<code>?tisch=1</code>, <code>?tisch=2</code>, …) bleiben dauerhaft gleich, auch über mehrere Turniere hinweg, unabhängig davon, wer an welchem Tisch sitzt. Einmal ausdrucken genügt für immer. Jeder Tisch scannt seinen eigenen Code und sieht dort nur seine eigenen Spielergebnisse.</p>
     <label for="qr-count">Anzahl Tische</label>
     <input type="number" id="qr-count" min="1" max="60" value="24" style="max-width:120px;">
@@ -349,6 +354,7 @@
       <button class="btn gold" id="qr-generate-btn">QR-Codes anzeigen</button>
     </div>
     <div class="qr-grid" id="qr-grid" style="margin-top:1.2rem;"></div>
+    </div>
   </div>
 
   <div id="rounds-container"></div>
@@ -1479,6 +1485,11 @@ function render(){
 }
 
 document.getElementById('qr-generate-btn').addEventListener('click', renderQRCodes);
+document.getElementById('qr-toggle').addEventListener('click', function(){
+  const open = this.getAttribute('aria-expanded') !== 'true';
+  this.setAttribute('aria-expanded', open);
+  document.getElementById('qr-body').classList.toggle('hidden', !open);
+});
 
 function baseUrlWithoutQuery(){
   return window.location.origin + window.location.pathname;
