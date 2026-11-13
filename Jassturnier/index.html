@@ -126,6 +126,33 @@
   .qr-item .qr-label{font-family:Georgia,serif; font-weight:700; color:var(--navy); font-size:.95rem;}
   .qr-item .qr-url{font-size:.72rem; color:var(--muted); word-break:break-all; margin-top:.2rem;}
   .sync-status{text-align:center; font-size:.78rem; color:#888; margin:.6rem 0 0;}
+
+  /* Admin: einklappbare Runden und Tisch-Übersicht oben */
+  .round-toggle{all:unset; box-sizing:border-box; width:100%; display:flex; align-items:center; gap:.5rem .9rem; flex-wrap:wrap; cursor:pointer;}
+  .round-toggle:focus-visible{outline:2px solid var(--gold); outline-offset:4px;}
+  .round-toggle h2{margin:0 !important;}
+  .round-toggle .round-label{margin:0;}
+  .rt-summary{color:var(--muted); font-size:.92rem; font-weight:600;}
+  .rt-summary.all-ok{color:var(--green);}
+  .rt-chev{margin-left:auto; font-size:1.4rem; color:var(--navy); transition:transform .2s; line-height:1;}
+  .round-toggle[aria-expanded="false"] .rt-chev{transform:rotate(-90deg);}
+  .round-body{margin-top:1.1rem;}
+  .dash-head{display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; flex-wrap:wrap; margin-bottom:.8rem;}
+  .dash-count{font-weight:700; color:var(--navy);}
+  .dash-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(125px,1fr)); gap:.5rem;}
+  .dash-chip{all:unset; box-sizing:border-box; cursor:pointer; border:1px solid var(--line); border-left:6px solid #c9c3ab; border-radius:6px; background:#fffdf7; padding:.45rem .6rem; display:flex; flex-direction:column; gap:.05rem;}
+  .dash-chip:hover{box-shadow:0 1px 4px rgba(2,22,57,.15);}
+  .dash-chip:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+  .dash-chip .dc-num{font-weight:700; color:var(--navy);}
+  .dash-chip .dc-state{font-size:.8rem; color:var(--muted);}
+  .dash-chip.ok{border-left-color:#2f7a4a; background:#eaf3ee;}
+  .dash-chip.ok .dc-state{color:var(--green); font-weight:700;}
+  .dash-chip.bad{border-left-color:var(--red); background:#fbeeee;}
+  .dash-chip.bad .dc-state{color:var(--red); font-weight:700;}
+  .dash-chip.partial{border-left-color:var(--gold);}
+  .dash-legend{font-size:.8rem; color:var(--muted); margin:.7rem 0 0;}
+  .table-block.flash{animation:tbflash 1.6s ease-out;}
+  @keyframes tbflash{0%{box-shadow:0 0 0 4px var(--gold);}100%{box-shadow:0 0 0 0 transparent;}}
   #conn-hint{position:sticky; top:0; z-index:50; margin:0; border-radius:0; text-align:center;}
   .table-scroll{overflow-x:auto;}
 
@@ -290,6 +317,8 @@
   </div>
 
   <div id="admin-content" class="hidden">
+
+  <div class="card hidden" id="dash-card"></div>
 
   <div class="card" id="setup-card">
     <h2>1. Spieler erfassen</h2>
@@ -730,6 +759,7 @@ function finishRound(roundIdx){
     return;
   }
   round.complete = true;
+  roundOpen.delete(roundIdx); // abgeschlossene Runde klappt zu, die neue ist offen
   if(round.pause.length > 0){
     const allScores = [];
     round.tables.forEach(t => { const tt = tableTotals(t); allScores.push(tt.sum1, tt.sum2); });
@@ -773,6 +803,7 @@ function archiveCurrentTournament(){
 function resetTournament(){
   if(!confirm('Turnier abschliessen? Es wird in die Historie verschoben und ein neues Turnier kann erfasst werden.')) return;
   archiveCurrentTournament();
+  roundOpen.clear();
   state.current = { players: [], rounds: [] };
   document.getElementById('players-input').value = '';
   update(ref(db, 'jassturnier/state'), { current: null, history: state.history });
@@ -781,6 +812,7 @@ function resetTournament(){
 
 function deleteCurrentTournament(){
   if(!confirm('Achtung: Das aktuelle Turnier wird ENDGÜLTIG gelöscht, ohne in die Historie zu wandern. Wirklich fortfahren?')) return;
+  roundOpen.clear();
   state.current = { players: [], rounds: [] };
   document.getElementById('players-input').value = '';
   set(ref(db, CURRENT_PATH), null);
@@ -1179,6 +1211,61 @@ function setRevealStage(n){
   renderRevealCard();
 }
 
+// Ein-/Ausklappen der Runden: laufende Runde offen, abgeschlossene zu – ausser der Admin hat es selbst umgestellt.
+const roundOpen = new Map();
+function isRoundOpen(round, ridx){ return roundOpen.has(ridx) ? roundOpen.get(ridx) : !round.complete; }
+
+function tableStatus(t){
+  const tt = tableTotals(t);
+  if(tt.filled === GAMES_PER_TABLE) return tt.total === EXPECTED_TABLE_TOTAL ? 'ok' : 'bad';
+  return tt.filled > 0 ? 'partial' : 'empty';
+}
+
+// Übersicht oben: Status jedes Tisches der laufenden (sonst letzten) Runde, Klick springt zum Tisch.
+function renderDashboard(){
+  const card = document.getElementById('dash-card');
+  const rounds = state.current.rounds;
+  if(rounds.length === 0){ card.classList.add('hidden'); card.innerHTML = ''; return; }
+  let ridx = rounds.findIndex(r => !r.complete);
+  const allDone = ridx < 0;
+  if(allDone) ridx = rounds.length - 1;
+  const round = rounds[ridx];
+  const okCount = round.tables.filter(t => tableStatus(t) === 'ok').length;
+  let html = '<div class="dash-head"><h2 style="margin:0;">' + (allDone ? 'Alle ' + ROUNDS_TOTAL + ' Runden abgeschlossen' : 'Übersicht Runde ' + (ridx+1) + ' von ' + ROUNDS_TOTAL) + '</h2>' +
+    '<span class="dash-count">' + okCount + ' von ' + round.tables.length + ' Tischen fertig</span></div>';
+  html += '<div class="dash-grid">';
+  round.tables.forEach((t, tidx) => {
+    const st = tableStatus(t);
+    const tt = tableTotals(t);
+    const label = st === 'ok' ? '✓ fertig'
+      : st === 'bad' ? '⚠ ' + tt.total.toLocaleString('de-CH') + ' statt ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH')
+      : st === 'partial' ? tt.filled + ' von ' + GAMES_PER_TABLE + ' Spielen'
+      : 'noch nichts';
+    html += '<button type="button" class="dash-chip ' + st + '" data-dash-jump="' + ridx + '-' + tidx + '">' +
+      '<span class="dc-num">Tisch ' + (tidx+1) + (t.locked ? ' 🔒' : '') + '</span><span class="dc-state">' + label + '</span></button>';
+  });
+  html += '</div>';
+  if(!allDone && okCount === round.tables.length){
+    html += '<div class="row"><button class="btn gold" data-finish="' + ridx + '" data-dash-finish="' + ridx + '">Alle Tische fertig &ndash; Runde ' + (ridx+1) + ' abschliessen' + (ridx+1 < ROUNDS_TOTAL ? ' &amp; nächste Runde auslosen' : ' &amp; Schlussrangliste erstellen') + '</button></div>';
+  }
+  html += '<p class="dash-legend">Grün = 10 Spiele, Kontrolle OK &middot; Rot = Punkte stimmen nicht &middot; 🔒 = von der Turnierleitung gesperrt. Auf einen Tisch klicken, um direkt dorthin zu springen.</p>';
+  card.innerHTML = html;
+  card.classList.remove('hidden');
+
+  card.querySelectorAll('[data-dash-jump]').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const [r, t] = this.dataset.dashJump.split('-').map(Number);
+      if(!isRoundOpen(state.current.rounds[r], r)){ roundOpen.set(r, true); render(); }
+      const el = document.getElementById('tb-' + r + '-' + t);
+      if(!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    });
+  });
+  const fin = card.querySelector('[data-dash-finish]');
+  if(fin) fin.addEventListener('click', function(){ finishRound(Number(this.dataset.dashFinish)); });
+}
+
 function render(){
   const setupCard = document.getElementById('setup-card');
   const startBtn = document.getElementById('start-btn');
@@ -1219,8 +1306,14 @@ function render(){
   rounds.forEach((round, ridx) => {
     const card = document.createElement('div');
     card.className = 'card';
-    let html = '<h2>Runde ' + (ridx+1) + '</h2>';
-    html += '<span class="round-label">' + (round.complete ? 'Abgeschlossen' : 'Läuft') + ' &middot; ' + GAMES_PER_TABLE + ' Spiele</span>';
+    const open = isRoundOpen(round, ridx);
+    const okCount = round.tables.filter(t => tableStatus(t) === 'ok').length;
+    let html = '<button type="button" class="round-toggle" data-round-toggle="'+ridx+'" aria-expanded="'+open+'">' +
+      '<h2>Runde ' + (ridx+1) + '</h2>' +
+      '<span class="round-label">' + (round.complete ? 'Abgeschlossen' : 'Läuft') + ' &middot; ' + GAMES_PER_TABLE + ' Spiele</span>' +
+      '<span class="rt-summary' + (okCount === round.tables.length ? ' all-ok' : '') + '">' + okCount + ' von ' + round.tables.length + ' Tischen fertig</span>' +
+      '<span class="rt-chev" aria-hidden="true">▾</span></button>';
+    html += '<div class="round-body' + (open ? '' : ' hidden') + '">';
     if(round.pause.length > 0){
       html += '<div class="pause-note">Pausiert diese Runde: ' + round.pause.map(esc).join(', ') + '</div>';
     }
@@ -1228,7 +1321,7 @@ function render(){
       const tt = tableTotals(t);
       const allFilled = tt.filled === GAMES_PER_TABLE;
       const isBad = allFilled && tt.total !== EXPECTED_TABLE_TOTAL;
-      html += '<div class="table-block">';
+      html += '<div class="table-block" id="tb-'+ridx+'-'+tidx+'">';
       html += '<div class="tnum" style="display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap;">' +
         '<span>Tisch ' + (tidx+1) + '</span>' +
         '<button type="button" class="btn ' + (t.locked ? 'ghost' : 'gold') + '" style="font-size:.75rem; padding:.35rem .7rem;" data-toggle-lock="'+ridx+'-'+tidx+'">' +
@@ -1280,7 +1373,7 @@ function render(){
     } else {
       html += '<span class="status-msg">Abgeschlossen &middot; Punkte können hier weiterhin korrigiert werden, Rangliste passt sich automatisch an.</span>';
     }
-    html += '</div>';
+    html += '</div></div>';
     card.innerHTML = html;
     roundsContainer.appendChild(card);
   });
@@ -1356,6 +1449,7 @@ function render(){
       }
       unsavedTableKeys.delete(key);
       update(tableRef(r, t), tablePatch(round.tables[t]));
+      renderDashboard();
       renderLeaderboard();
       const status = document.getElementById('save-status-'+key);
       if(status){ status.textContent = 'Gespeichert ✓'; status.style.color = 'var(--green)'; }
@@ -1367,7 +1461,17 @@ function render(){
   roundsContainer.querySelectorAll('[data-redraw]').forEach(btn => {
     btn.addEventListener('click', function(){ redrawRound(Number(this.dataset.redraw)); });
   });
+  roundsContainer.querySelectorAll('[data-round-toggle]').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const ridx = Number(this.dataset.roundToggle);
+      const open = this.getAttribute('aria-expanded') !== 'true';
+      roundOpen.set(ridx, open);
+      this.setAttribute('aria-expanded', open);
+      this.nextElementSibling.classList.toggle('hidden', !open);
+    });
+  });
 
+  renderDashboard();
   renderLeaderboard();
   renderRevealCard();
   renderHistory();
