@@ -214,6 +214,7 @@
           <option value="essen">Sortieren: Essenswahl A-Z</option>
           <option value="name">Sortieren: Name A-Z</option>
         </select>
+        <button class="btn btn-primary" onclick="openEventAddModal()">+ Anmeldung erfassen</button>
         <button class="btn btn-outline btn-sm" onclick="exportEventsCsv()">CSV Export</button>
         <button class="btn btn-outline btn-sm" onclick="loadEventSignups()">Aktualisieren</button>
       </div>
@@ -272,6 +273,24 @@
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">Abbrechen</button>
       <button class="btn btn-primary" onclick="saveMember()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="eventAddModal">
+  <div class="modal">
+    <h3>Event-Anmeldung erfassen</h3>
+    <label>Event</label>
+    <select id="eaEvent" onchange="fillEventAddEssen()"></select>
+    <label>Vorname</label><input type="text" id="eaVorname">
+    <label>Nachname</label><input type="text" id="eaNachname">
+    <label>Essenswahl</label>
+    <select id="eaEssen"></select>
+    <label>Bemerkung</label>
+    <input type="text" id="eaBemerkung" placeholder="Optional" maxlength="200">
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeEventAddModal()">Abbrechen</button>
+      <button class="btn btn-primary" id="eaSaveBtn" onclick="saveEventSignup()">Speichern</button>
     </div>
   </div>
 </div>
@@ -540,6 +559,62 @@
         showMsg('Gespeichert.', 'ok');
       })
       .catch(function(err) { showMsg('Fehler beim Speichern: ' + err.message, 'err'); });
+  }
+
+  // ---------- Event-Anmeldung manuell erfassen ----------
+  function openEventAddModal() {
+    var names = allEventsConfig.map(function(e) { return e.name; });
+    allEventSignups.forEach(function(s) { if (s.event && names.indexOf(s.event) === -1) names.push(s.event); });
+    if (!names.length) { showMsg('Keine Events gefunden – bitte zuerst «Aktualisieren».', 'err'); return; }
+    var preselect = document.getElementById('filterEventName').value || names[0];
+    document.getElementById('eaEvent').innerHTML = names.map(function(n) {
+      return '<option' + (n === preselect ? ' selected' : '') + '>' + escAttr(n) + '</option>';
+    }).join('');
+    ['eaVorname', 'eaNachname', 'eaBemerkung'].forEach(function(id) { document.getElementById(id).value = ''; });
+    fillEventAddEssen();
+    document.getElementById('eventAddModal').classList.add('open');
+    document.getElementById('eaVorname').focus();
+  }
+
+  function closeEventAddModal() { document.getElementById('eventAddModal').classList.remove('open'); }
+
+  function fillEventAddEssen() {
+    var name = document.getElementById('eaEvent').value;
+    var cfg = allEventsConfig.find(function(e) { return e.name === name; });
+    var options = cfg ? cfg.essen.slice() : [];
+    allEventSignups.forEach(function(s) {
+      if (s.event === name && s.essen && options.indexOf(s.essen) === -1) options.push(s.essen);
+    });
+    document.getElementById('eaEssen').innerHTML = '<option value="">– keine –</option>' +
+      options.map(function(o) { return '<option>' + escAttr(o) + '</option>'; }).join('');
+  }
+
+  function saveEventSignup() {
+    var payload = {
+      formType: 'event',
+      eventName: document.getElementById('eaEvent').value,
+      vorname: document.getElementById('eaVorname').value.trim(),
+      nachname: document.getElementById('eaNachname').value.trim(),
+      essen: document.getElementById('eaEssen').value,
+      bemerkung: document.getElementById('eaBemerkung').value.trim()
+    };
+    if (!payload.vorname || !payload.nachname) { alert('Bitte Vor- und Nachname ausfüllen.'); return; }
+    var btn = document.getElementById('eaSaveBtn');
+    btn.disabled = true; btn.textContent = 'Speichert…';
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    })
+      .then(function(res) { return res.json(); })
+      .then(function(result) {
+        if (result.status !== 'success') { alert(result.message || 'Fehler beim Speichern.'); return; }
+        closeEventAddModal();
+        showMsg(payload.vorname + ' ' + payload.nachname + ' angemeldet.', 'ok');
+        loadEventSignups();
+      })
+      .catch(function(err) { alert('Fehler beim Speichern: ' + err.message); })
+      .then(function() { btn.disabled = false; btn.textContent = 'Speichern'; });
   }
 
   function exportEventsCsv() {
