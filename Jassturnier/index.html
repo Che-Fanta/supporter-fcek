@@ -225,6 +225,28 @@
     body.rv .pairing-state{font-size:.9rem;}
     body.rv .pairing-grid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));}
     body.rv .fog-ticker{font-size:1.3rem;}
+    /* Ohne Scrollen: kompakter Kopf, volle Breite, Rangliste in Spalten nebeneinander.
+       Was dann noch nicht passt, verkleinert fitRv() per zoom auf Bildschirmhöhe. */
+    body.rv{padding-bottom:0;}
+    body.rv header{padding:.45rem 1.5rem; border-bottom-width:4px;}
+    body.rv .header-inner{max-width:none;}
+    body.rv .header-logo{padding:3px 8px;}
+    body.rv .header-logo img{height:52px;}
+    body.rv header h1{margin:0;}
+    body.rv .made-by{display:none;}
+    body.rv #rangliste-view{max-width:none; padding:0 1.5rem .8rem;}
+    body.rv .card{margin-top:.8rem; padding:.9rem 1.2rem;}
+    body.rv .card h2{font-size:1.8rem; line-height:1.15;}
+    body.rv .card .desc{margin:0 0 .6rem; font-size:1.05rem;}
+    body.rv .pairing{padding:.4rem .7rem;}
+    body.rv .pairing-head{margin-bottom:.1rem;}
+    body.rv .rank-cols{display:grid; grid-template-columns:repeat(var(--cols,1),minmax(0,1fr)); gap:0 1.6rem; align-items:start;}
+    body.rv table.rangliste td{padding:.3rem .5rem;}
+    body.rv .fog-ticker{padding:.4rem 1rem; margin-bottom:.6rem; min-height:0;}
+    body.rv .fog-hint{margin:.5rem 0 0;}
+    body.rv .fun-cols{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:0 2.5rem; align-items:start;}
+    body.rv .fun-cols .fun-h3b{margin-top:0 !important;}
+    body.rv .fun-cols h3{font-family:Arial,Helvetica,sans-serif !important; font-size:1.3rem !important; color:#0b1f3a !important;}
   }
   @media(max-width:480px){
     header{padding:.9rem 1rem;}
@@ -864,21 +886,34 @@ function rankAt(list, idx, key){
   return i + 1;
 }
 
+// Rangliste in mehrere gleich lange Tabellen aufteilen (Spalte 1 = Plätze 1..n, Spalte 2 = weiter ...).
+// Nebeneinander stehen sie nur auf der Live-Seite ab 1000 px (CSS .rank-cols), sonst untereinander.
+function rankColsHtml(headHtml, rows, tableClass){
+  const n = rows.length;
+  const cols = !document.body.classList.contains('rv') ? 1 : n > 24 ? 3 : n > 10 ? 2 : 1;
+  const per = Math.ceil(n / cols) || 1;
+  let html = '<div class="rank-cols" style="--cols:' + cols + '">';
+  for(let c = 0; c < cols; c++){
+    html += '<div class="table-scroll"><table class="rangliste' + (tableClass ? ' ' + tableClass : '') + '"><thead>' + headHtml + '</thead><tbody>' +
+      rows.slice(c * per, (c + 1) * per).join('') + '</tbody></table></div>';
+  }
+  return html + '</div>';
+}
+
 function rankingTableHtml(list){
-  let html = '<div class="table-scroll"><table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th></tr></thead><tbody>';
+  const rows = [];
   list.forEach((row, idx) => {
     const rank = rankAt(list, idx, 'total');
     const cls = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
     const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
-    html += '<tr class="'+cls+'"><td class="rank-num">' + rank + '</td>' +
+    rows.push('<tr class="'+cls+'"><td class="rank-num">' + rank + '</td>' +
       '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + esc(row.name) + '</td>' +
       '<td>' + (row.rounds[0]==null?'–':row.rounds[0]) + '</td>' +
       '<td>' + (row.rounds[1]==null?'–':row.rounds[1]) + '</td>' +
       '<td>' + (row.rounds[2]==null?'–':row.rounds[2]) + '</td>' +
-      '<td><strong>' + row.total + '</strong></td></tr>';
+      '<td><strong>' + row.total + '</strong></td></tr>');
   });
-  html += '</tbody></table></div>';
-  return html;
+  return rankColsHtml('<tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th></tr>', rows);
 }
 
 // Siegerehrung: schrittweise Enthüllung (Stufe 0 = nichts, 1 = ab Platz 4, 2 = + Platz 3, 3 = + Platz 2, 4 = + Sieger).
@@ -903,12 +938,12 @@ function finalRevealTableHtml(tourn, stage){
   const prevRank = {};
   prevList.forEach((r, i) => { prevRank[r.name] = rankAt(prevList, i, 'total'); });
   const alias = buildAliasMap(tourn.players);
-  let html = '<div class="table-scroll"><table class="rangliste"><thead><tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th><th>Seit Runde 2</th></tr></thead><tbody>';
+  const rows = [];
   list.forEach((row, idx) => {
     const rank = rankAt(list, idx, 'total');
     const step = revealStepOfRank(rank);
     if(step > stage){
-      html += '<tr class="locked-row"><td class="rank-num">' + rank + '</td><td colspan="6">🔒 ' + (rank === 1 ? 'Wer ist der Sieger …?' : 'Wer wird das sein …?') + '</td></tr>';
+      rows.push('<tr class="locked-row"><td class="rank-num">' + rank + '</td><td colspan="6">🔒 ' + (rank === 1 ? 'Wer ist der Sieger …?' : 'Wer wird das sein …?') + '</td></tr>');
       return;
     }
     const animate = lastRevealStage !== null && step > lastRevealStage;
@@ -918,17 +953,16 @@ function finalRevealTableHtml(tourn, stage){
     const icon = MYSTERY_ICONS[hashStr(row.name) % MYSTERY_ICONS.length];
     const moved = prevRank[row.name] - rank;
     const trend = moved > 0 ? '<span class="fog-up">▲ ' + moved + '</span>' : moved < 0 ? '<span class="fog-down">▼ ' + Math.abs(moved) + '</span>' : '<span class="fog-same">＝</span>';
-    html += '<tr class="'+cls+'"'+delay+'><td class="rank-num">' + rank + '</td>' +
+    rows.push('<tr class="'+cls+'"'+delay+'><td class="rank-num">' + rank + '</td>' +
       '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + esc(row.name) +
         '<br><small class="alias-note">' + icon + ' ' + esc(alias[row.name]) + '</small></td>' +
       '<td>' + (row.rounds[0]==null?'–':row.rounds[0]) + '</td>' +
       '<td>' + (row.rounds[1]==null?'–':row.rounds[1]) + '</td>' +
       '<td>' + (row.rounds[2]==null?'–':row.rounds[2]) + '</td>' +
       '<td><strong>' + row.total + '</strong></td>' +
-      '<td>' + trend + ' <small class="alias-note">(vorher ' + prevRank[row.name] + ')</small></td></tr>';
+      '<td>' + trend + ' <small class="alias-note">(vorher ' + prevRank[row.name] + ')</small></td></tr>');
   });
-  html += '</tbody></table></div>';
-  return html;
+  return rankColsHtml('<tr><th>Rang</th><th>Name</th><th>Runde 1</th><th>Runde 2</th><th>Runde 3</th><th>Total</th><th>Seit Runde 2</th></tr>', rows);
 }
 
 function startConfetti(){
@@ -1026,7 +1060,7 @@ function anonRankingTableHtml(tourn, withTrend){
     prevList.forEach((r, i) => { prevRank[r.name] = rankAt(prevList, i, 'total'); });
   }
   let html = '<div class="fog-wrap"><div class="fog-ticker" id="fog-ticker">' + esc(NEBEL_SPRUECHE[0]) + '</div>';
-  html += '<table class="rangliste"><thead><tr><th>Rang</th><th>Deckname</th>' + (withTrend ? '<th>Seit Runde 2</th>' : '') + '</tr></thead><tbody>';
+  const rows = [];
   list.forEach((row, idx) => {
     const rank = rankAt(list, idx, 'total');
     const cls = rank===1?'rank1':rank===2?'rank2':rank===3?'rank3':'';
@@ -1038,10 +1072,10 @@ function anonRankingTableHtml(tourn, withTrend){
       const trend = moved > 0 ? '<span class="fog-up">▲ ' + moved + '</span>' : moved < 0 ? '<span class="fog-down">▼ ' + Math.abs(moved) + '</span>' : '<span class="fog-same">＝</span>';
       trendCell = '<td>' + trend + ' <small class="alias-note">(vorher ' + prevRank[row.name] + ')</small></td>';
     }
-    html += '<tr class="'+cls+'"><td class="rank-num">' + rank + '</td>' +
-      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + '<span class="fog-icon">' + icon + '</span> ' + esc(alias[row.name]) + '</td>' + trendCell + '</tr>';
+    rows.push('<tr class="'+cls+'"><td class="rank-num">' + rank + '</td>' +
+      '<td>' + (medal?'<span class="medal">'+medal+'</span>':'') + '<span class="fog-icon">' + icon + '</span> ' + esc(alias[row.name]) + '</td>' + trendCell + '</tr>');
   });
-  html += '</tbody></table>';
+  html += rankColsHtml('<tr><th>Rang</th><th>Deckname</th>' + (withTrend ? '<th>Seit Runde 2</th>' : '') + '</tr>', rows);
   html += '<p class="fog-hint">🔒 ' + (withTrend ? 'Punkte und echte Namen gibt es erst bei der Siegerehrung.' : 'Punkte und echte Namen gibt es erst nach Runde 3 &ndash; dann siehst du auch, wie sich dein Deckname verändert hat.') + '</p></div>';
   return html;
 }
@@ -1097,7 +1131,7 @@ function computeHighestRoundTotal(tourn){
 function funStatsHtml(tourn){
   const shutouts = computeShutoutWins(tourn);
   const highest = computeHighestRoundTotal(tourn);
-  let html = '<div class="card" style="margin-top:1.4rem;"><h2>🎉 Fun-Rangliste</h2>';
+  let html = '<div class="card" style="margin-top:1.4rem;"><h2>🎉 Fun-Rangliste</h2><div class="fun-cols"><div>';
   html += '<h3 style="font-family:Georgia,serif; color:var(--navy); font-size:1.05rem; margin:0 0 .6rem;">Top 3 Anzahl Match (' + GAME_POINTS_TOTAL + ' Punkte)</h3>';
   if(!shutouts.length){
     html += '<p class="status-msg">Kein ' + GAME_POINTS_TOTAL + ':0-Ergebnis in diesem Turnier.</p>';
@@ -1110,11 +1144,12 @@ function funStatsHtml(tourn){
     });
     html += '</tbody></table>';
   }
-  html += '<h3 style="font-family:Georgia,serif; color:var(--navy); font-size:1.05rem; margin:1.2rem 0 .6rem;">Höchstes Rundentotal eines Teams</h3>';
+  html += '</div><div>';
+  html += '<h3 class="fun-h3b" style="font-family:Georgia,serif; color:var(--navy); font-size:1.05rem; margin:1.2rem 0 .6rem;">Höchstes Rundentotal eines Teams</h3>';
   html += highest.players.length
     ? '<p class="status-msg" style="font-size:1rem;"><strong>' + highest.players.map(esc).join(' &amp; ') + '</strong> mit <strong>' + highest.value + ' Punkten</strong> in Runde ' + (highest.round+1) + '</p>'
     : '<p class="status-msg">Noch keine Runde abgeschlossen.</p>';
-  html += '</div>';
+  html += '</div></div></div>';
   return html;
 }
 
@@ -1806,7 +1841,28 @@ function renderRanglisteView(){
     showWinnerOverlay(list.filter(r => r.total === list[0].total).map(r => r.name));
   }
   lastRevealStage = allDone ? stage : 0;
+  fitRv();
 }
+
+// Beamer/grosser Bildschirm: Kopf + Live-Seite so verkleinern, dass alles ohne Scrollen sichtbar ist.
+// Auf Handys (< 1000 px) wird normal gescrollt.
+function fitRv(){
+  const view = document.getElementById('rangliste-view');
+  const head = document.querySelector('header');
+  if(!document.body.classList.contains('rv') || view.classList.contains('hidden')) return;
+  const els = [head, view];
+  els.forEach(e => { e.style.zoom = ''; });
+  if(window.innerWidth < 1000) return;
+  const fits = z => { els.forEach(e => { e.style.zoom = z; }); return document.documentElement.scrollHeight <= window.innerHeight + 1; };
+  if(fits(1)){ els.forEach(e => { e.style.zoom = ''; }); return; }
+  // Grösster Zoom, bei dem alles passt (bei kleinerem Zoom wird es breiter, Spalten ordnen sich neu).
+  let lo = 0.45, hi = 1;
+  for(let i = 0; i < 8; i++){ const mid = (lo + hi) / 2; if(fits(mid)) lo = mid; else hi = mid; }
+  fits(lo);
+}
+let fitRvTimer = null;
+window.addEventListener('resize', () => { clearTimeout(fitRvTimer); fitRvTimer = setTimeout(fitRv, 150); });
+window.addEventListener('load', fitRv);
 </script>
 
 </body>
