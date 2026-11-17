@@ -240,11 +240,11 @@
     /* Am Beamer klickt niemand: dezente Zeile unten in der Mitte, Domain ausgeschrieben */
     body.rv .made-by{display:block; margin:.2rem 0 .4rem;}
     body.rv .made-by a{box-shadow:none; background:transparent; padding:0; gap:.5rem; pointer-events:none;}
-    body.rv .made-by img{height:24px;}
+    body.rv .made-by img{height:34px;}
     body.rv .made-by .txt{flex-direction:row; align-items:baseline; gap:.45rem;}
-    body.rv .made-by small{font-size:.85rem; color:#4b5563;}
-    body.rv .made-by strong{font-size:.95rem;}
-    body.rv .made-by .dom{display:inline; font-size:.95rem; font-weight:700; color:#A63D1C;}
+    body.rv .made-by small{font-size:1rem; color:#4b5563;}
+    body.rv .made-by strong{font-size:1.3rem;}
+    body.rv .made-by .dom{display:inline; font-size:1.3rem; font-weight:700; color:#A63D1C;}
     body.rv #rangliste-view{max-width:none; padding:0 1.5rem .8rem;}
     body.rv .card{margin-top:.8rem; padding:.9rem 1.2rem;}
     body.rv .card h2{font-size:1.8rem; line-height:1.15;}
@@ -321,6 +321,13 @@
   .made-by strong { font-size: 1.05rem; letter-spacing: 0.04em; color: #2B221C; font-weight: 800; }
   .made-by strong span { color: #A63D1C; }
   .made-by .dom { display: none; }
+  body.adm .made-by a { box-shadow: none; background: transparent; padding: 0; gap: 0.6rem; }
+  body.adm .made-by img { height: 40px; }
+  body.adm .made-by .txt { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.5rem; }
+  body.adm .made-by small { font-size: 1rem; color: #4b5563; }
+  body.adm .made-by strong { font-size: 1.35rem; }
+  body.adm .made-by .dom { display: inline; font-size: 1.35rem; font-weight: 700; color: #A63D1C; }
+  @media (max-width: 480px) { body.adm .made-by { padding: 0 12px; } body.adm .made-by a { gap: 0.4rem; } body.adm .made-by .txt { flex-wrap: nowrap; gap: 0.35rem; } body.adm .made-by img { height: 28px; } body.adm .made-by small { font-size: 0.8rem; } body.adm .made-by strong, body.adm .made-by .dom { font-size: 1rem; white-space: nowrap; } }
   @media print { .made-by { display: none; } }
 </style>
 </head>
@@ -455,7 +462,7 @@ const stateRef = ref(db, "jassturnier/state");
   const q = new URLSearchParams(window.location.search);
   const tisch = parseInt(q.get('tisch'), 10);
   const view = (q.get('tisch') && !isNaN(tisch) && tisch >= 1) ? 'table-view' : (q.has('rangliste') ? 'rangliste-view' : null);
-  if(!view) return;
+  if(!view){ document.body.classList.add('adm'); return; }
   if(view === 'rangliste-view') document.body.classList.add('rv');
   document.getElementById('organizer-view').classList.add('hidden');
   document.getElementById(view).classList.remove('hidden');
