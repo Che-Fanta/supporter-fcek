@@ -5,6 +5,13 @@
         ".read": true,
         ".write": true
       },
+      "backups": {
+        ".read": true,
+        "$id": {
+          ".write": "!data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['at', 'label', 'current']) && newData.child('at').isNumber()"
+        }
+      },
       "$other": {
         ".read": false,
         ".write": false

@@ -398,6 +398,23 @@
     </div>
   </div>
 
+  <div class="card" id="backup-card">
+    <button type="button" class="round-toggle" id="bk-toggle" aria-expanded="false">
+      <h2>Sicherungen</h2>
+      <span class="rt-summary" id="bk-summary">automatisch nach jeder Runde</span>
+      <span class="rt-chev" aria-hidden="true">▾</span>
+    </button>
+    <div class="round-body hidden" id="bk-body">
+    <p class="desc">Bei jedem Rundenabschluss, vor dem Neu-Auslosen, vor dem Löschen und beim Archivieren wird der komplette Stand doppelt gesichert: in der Datenbank (kann dort nicht gelöscht oder überschrieben werden) und als Datei auf diesem Gerät (Ordner «Downloads»). Die Datei lässt sich im Browser öffnen und ausdrucken &ndash; alle Tische mit allen Spielen und die Rangliste.</p>
+    <div class="row">
+      <button class="btn gold" id="bk-now-btn">Jetzt sichern</button>
+      <label class="btn ghost" style="cursor:pointer;">Sicherungsdatei einspielen…<input type="file" id="bk-file" accept=".html,.json,text/html,application/json" hidden></label>
+    </div>
+    <p class="status-msg" id="bk-status" style="margin-top:.6rem;"></p>
+    <div id="bk-list" style="margin-top:.6rem;"></div>
+    </div>
+  </div>
+
   <div id="rounds-container"></div>
 
   <div class="card hidden" id="reveal-card">
@@ -604,7 +621,7 @@ onValue(ref(db, '.info/connected'), (snap) => {
 
 // Ohne Verbindung keine Admin-Aktionen: Firebase würde sie zurückhalten und später
 // über das schreiben, was die Tische inzwischen gespeichert haben.
-const ADMIN_WRITE_CONTROLS = '#start-btn, #reset-btn, #delete-current-btn, #reveal-next-btn, #reveal-back-btn, [data-toggle-total], [data-toggle-lock], [data-save-table], [data-finish], [data-redraw], [data-hist-delete]';
+const ADMIN_WRITE_CONTROLS = '#start-btn, #reset-btn, #delete-current-btn, #reveal-next-btn, #reveal-back-btn, [data-toggle-total], [data-toggle-lock], [data-save-table], [data-finish], [data-redraw], [data-hist-delete], #bk-now-btn, [data-bk-restore]';
 document.getElementById('admin-content').addEventListener('click', (e) => {
   if(connected || !e.target.closest(ADMIN_WRITE_CONTROLS)) return;
   e.preventDefault();
@@ -689,6 +706,7 @@ function boot(){
   if(adminUnlocked){
     document.getElementById('login-card').classList.add('hidden');
     document.getElementById('admin-content').classList.remove('hidden');
+    listenBackups();
     render();
   } else {
     document.getElementById('login-card').classList.remove('hidden');
@@ -827,11 +845,13 @@ function finishRound(roundIdx){
     patch[roundIdx + 1] = nextRound;
   }
   update(ref(db, CURRENT_PATH + '/rounds'), patch);
+  makeBackup('Runde ' + (roundIdx + 1) + ' abgeschlossen');
   render();
 }
 
 function redrawRound(roundIdx){
   if(!confirm('Diese Runde wirklich neu auslosen? Bereits eingetragene Punkte dieser Runde gehen verloren.')) return;
+  makeBackup('Vor Neu-Auslosung Runde ' + (roundIdx + 1));
   state.current.rounds[roundIdx] = drawRound(state.current.players.slice());
   unsavedTableKeys.forEach(key => { if(key.startsWith(roundIdx+'-')) unsavedTableKeys.delete(key); });
   set(ref(db, CURRENT_PATH + '/rounds/' + roundIdx), state.current.rounds[roundIdx]);
@@ -849,6 +869,7 @@ function archiveCurrentTournament(){
 
 function resetTournament(){
   if(!confirm('Turnier abschliessen? Es wird in die Historie verschoben und ein neues Turnier kann erfasst werden.')) return;
+  makeBackup('Turnier abgeschlossen (archiviert)');
   archiveCurrentTournament();
   roundOpen.clear();
   state.current = { players: [], rounds: [] };
@@ -859,6 +880,7 @@ function resetTournament(){
 
 function deleteCurrentTournament(){
   if(!confirm('Achtung: Das aktuelle Turnier wird ENDGÜLTIG gelöscht, ohne in die Historie zu wandern. Wirklich fortfahren?')) return;
+  makeBackup('Vor dem Löschen');
   roundOpen.clear();
   state.current = { players: [], rounds: [] };
   document.getElementById('players-input').value = '';
@@ -1543,6 +1565,119 @@ document.getElementById('qr-toggle').addEventListener('click', function(){
   const open = this.getAttribute('aria-expanded') !== 'true';
   this.setAttribute('aria-expanded', open);
   document.getElementById('qr-body').classList.toggle('hidden', !open);
+});
+
+// ---------- Sicherungen ----------
+const BACKUP_PATH = 'jassturnier/backups';
+let backups = [];
+let backupsListening = false;
+function fmtTime(ts){ return new Date(ts).toLocaleString('de-CH', { weekday:'short', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); }
+function fileStamp(ts){ const d = new Date(ts), z = n => String(n).padStart(2,'0'); return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())+'_'+z(d.getHours())+'-'+z(d.getMinutes())+'-'+z(d.getSeconds()); }
+// Kompletter Stand doppelt sichern: in der DB (nur anlegen, nie löschen/überschreiben) und als Datei auf dem Admin-Gerät.
+function makeBackup(label, opts){
+  if(!state.current || !state.current.players || state.current.players.length === 0) return null;
+  const at = Date.now();
+  const entry = { at, label, current: JSON.parse(JSON.stringify(state.current)) };
+  const id = at + '-' + Math.random().toString(36).slice(2, 7);
+  set(ref(db, BACKUP_PATH + '/' + id), entry).catch(e => console.warn('Sicherung in DB fehlgeschlagen', e));
+  try{ localStorage.setItem('jt-backup-last', JSON.stringify(entry)); }catch(e){}
+  if(!opts || opts.download !== false){ try{ downloadBackup(entry); }catch(e){ console.warn('Sicherungsdatei', e); } }
+  const st = document.getElementById('bk-status');
+  if(st) st.textContent = 'Gesichert: ' + label + ' (' + fmtTime(at) + ')';
+  return entry;
+}
+function backupHtml(entry){
+  const tourn = JSON.parse(JSON.stringify(entry.current)); normalizeTournament(tourn);
+  const done = tourn.rounds.filter(r => r.complete).length;
+  const list = rankedList(tourn);
+  const v = x => (x === null || x === undefined) ? '' : esc(x);
+  let h = '<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>Jassturnier Sicherung ' + esc(fmtTime(entry.at)) + '</title><style>' +
+    'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:1.2rem;max-width:1000px}h1{font-size:1.4rem;margin:0}h2{font-size:1.15rem;margin:1.6rem 0 .4rem;border-bottom:2px solid #0b1f3a}' +
+    'table{border-collapse:collapse;margin:.3rem 0 .4rem}td,th{border:1px solid #999;padding:.15rem .45rem;text-align:right;font-size:.85rem}th{background:#eef}td.l,th.l{text-align:left}' +
+    '.tische{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.6rem 1rem}.bad{color:#b3121f;font-weight:700}.meta{color:#555;font-size:.9rem}' +
+    '@media print{h2{break-after:avoid}.tisch{break-inside:avoid}}</style></head><body>' +
+    '<h1>Supporter-Jassturnier &ndash; Sicherung</h1><p class="meta">' + esc(entry.label) + ' &middot; ' + esc(new Date(entry.at).toLocaleString('de-CH')) +
+    ' &middot; ' + tourn.players.length + ' Spieler &middot; ' + done + ' von ' + ROUNDS_TOTAL + ' Runden abgeschlossen</p>';
+  h += '<h2>Rangliste (abgeschlossene Runden)</h2><table><tr><th>Rang</th><th class="l">Name</th><th>R1</th><th>R2</th><th>R3</th><th>Total</th></tr>';
+  list.forEach((row, i) => { h += '<tr><td>' + rankAt(list, i, 'total') + '</td><td class="l">' + esc(row.name) + '</td>' + row.rounds.map(x => '<td>' + (x == null ? '–' : x) + '</td>').join('') + '<td><b>' + row.total + '</b></td></tr>'; });
+  h += '</table>';
+  tourn.rounds.forEach((round, ridx) => {
+    h += '<h2>Runde ' + (ridx + 1) + (round.complete ? ' (abgeschlossen)' : ' (läuft)') + '</h2><div class="tische">';
+    round.tables.forEach((t, tidx) => {
+      const tt = tableTotals(t);
+      h += '<div class="tisch"><b>Tisch ' + (tidx + 1) + '</b>' + (t.locked ? ' (gesperrt)' : '') + '<table><tr><th class="l">Spiel</th><th class="l">' + esc(t.team1.join(' & ')) + '</th><th class="l">' + esc(t.team2.join(' & ')) + '</th></tr>';
+      if(t.totalMode){ h += '<tr><td class="l">Gesamt</td><td>' + v(t.totalScore1) + '</td><td>' + v(t.totalScore2) + '</td></tr>'; }
+      else t.games.forEach((g, gi) => { h += '<tr><td class="l">' + (gi + 1) + '</td><td>' + v(g.score1) + '</td><td>' + v(g.score2) + '</td></tr>'; });
+      const bad = tt.filled === GAMES_PER_TABLE && tt.total !== EXPECTED_TABLE_TOTAL;
+      h += '<tr><th class="l">Summe</th><th>' + tt.sum1 + '</th><th>' + tt.sum2 + '</th></tr></table><div class="meta' + (bad ? ' bad' : '') + '">' + tt.filled + '/' + GAMES_PER_TABLE + ' Spiele, total ' + tt.total + (bad ? ' (statt ' + EXPECTED_TABLE_TOTAL + ')' : '') + '</div></div>';
+    });
+    h += '</div>';
+    if(round.pause && round.pause.length) h += '<p class="meta">Pause: ' + esc(round.pause.join(', ')) + '</p>';
+  });
+  h += '<p class="meta">Diese Datei kann im Admin-Bereich unter «Sicherungen» wieder eingespielt werden.</p>' +
+    '<script type="application/json" id="jt-backup">' + JSON.stringify(entry).replace(/</g, '\\u003c') + '</scr' + 'ipt></body></html>';
+  return h;
+}
+function downloadBackup(entry){
+  const blob = new Blob([backupHtml(entry)], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Jassturnier_Sicherung_' + fileStamp(entry.at) + '_' + String(entry.label).replace(/[^A-Za-z0-9äöüÄÖÜ]+/g, '-').replace(/^-+|-+$/g, '') + '.html';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function restoreBackup(entry){
+  if(!entry || !entry.current || !entry.current.players){ alert('Diese Sicherung ist ungültig.'); return; }
+  if(!connected){ alert('Keine Verbindung – bitte warten, bis die Verbindung wieder steht.'); return; }
+  const done = (entry.current.rounds || []).filter(r => r && r.complete).length;
+  if(!confirm('Sicherung «' + entry.label + '» vom ' + fmtTime(entry.at) + ' wiederherstellen?\n\n' + entry.current.players.length + ' Spieler, ' + done + ' Runden abgeschlossen.\n\nDer aktuelle Stand wird ersetzt (er wird vorher selbst noch gesichert).')) return;
+  makeBackup('Vor Wiederherstellung', { download: false });
+  const cur = JSON.parse(JSON.stringify(entry.current)); normalizeTournament(cur);
+  unsavedTableKeys.clear(); roundOpen.clear();
+  state.current = cur;
+  set(ref(db, CURRENT_PATH), cur);
+  render();
+  const st = document.getElementById('bk-status'); if(st) st.textContent = 'Wiederhergestellt: ' + entry.label + ' (' + fmtTime(entry.at) + ')';
+}
+function arr(x){ return Array.isArray(x) ? x : (x && typeof x === 'object') ? Object.keys(x).sort((a, b) => a - b).map(k => x[k]) : []; }
+function renderBackups(){
+  const el = document.getElementById('bk-list'); if(!el) return;
+  const sum = document.getElementById('bk-summary');
+  if(sum) sum.textContent = backups.length ? backups.length + ' gespeichert, letzte ' + fmtTime(backups[0].at) : 'automatisch nach jeder Runde';
+  if(!backups.length){ el.innerHTML = '<p class="desc">Noch keine Sicherung vorhanden.</p>'; return; }
+  el.innerHTML = '<div class="table-scroll"><table class="rangliste"><thead><tr><th>Zeit</th><th>Anlass</th><th>Spieler</th><th></th></tr></thead><tbody>' +
+    backups.slice(0, 30).map((b, i) => '<tr><td>' + esc(fmtTime(b.at)) + '</td><td>' + esc(b.label) + '</td><td>' + b.current.players.length + '</td>' +
+      '<td style="white-space:nowrap;"><button class="btn ghost" data-bk-dl="' + i + '" style="padding:.25rem .6rem;">Datei</button> <button class="btn ghost" data-bk-restore="' + i + '" style="padding:.25rem .6rem;">Wiederherstellen</button></td></tr>').join('') +
+    '</tbody></table></div>';
+}
+function listenBackups(){
+  if(backupsListening) return; backupsListening = true;
+  onValue(ref(db, BACKUP_PATH), snap => {
+    const val = snap.exists() ? snap.val() : {};
+    backups = Object.values(val || {}).filter(b => b && b.at && b.current).map(b => {
+      b.current.players = arr(b.current.players); b.current.rounds = arr(b.current.rounds); return b;
+    }).sort((a, b) => b.at - a.at);
+    renderBackups();
+  }, err => { const el = document.getElementById('bk-list'); if(el) el.innerHTML = '<p class="desc">Sicherungen in der Datenbank nicht lesbar. Die Dateien im Download-Ordner sind trotzdem da.</p>'; });
+}
+document.getElementById('bk-toggle').addEventListener('click', function(){
+  const open = this.getAttribute('aria-expanded') !== 'true';
+  this.setAttribute('aria-expanded', open);
+  document.getElementById('bk-body').classList.toggle('hidden', !open);
+});
+document.getElementById('bk-now-btn').addEventListener('click', () => { if(!makeBackup('Manuell')) alert('Kein laufendes Turnier – nichts zu sichern.'); });
+document.getElementById('bk-list').addEventListener('click', e => {
+  const dl = e.target.closest('[data-bk-dl]'); if(dl){ downloadBackup(backups[Number(dl.dataset.bkDl)]); return; }
+  const rs = e.target.closest('[data-bk-restore]'); if(rs) restoreBackup(backups[Number(rs.dataset.bkRestore)]);
+});
+document.getElementById('bk-file').addEventListener('change', async function(){
+  const f = this.files && this.files[0]; this.value = ''; if(!f) return;
+  try{
+    const txt = await f.text();
+    const m = txt.match(/<script type="application\/json" id="jt-backup">([\s\S]*?)<\/script>/);
+    restoreBackup(JSON.parse(m ? m[1] : txt));
+  }catch(err){ alert('Datei konnte nicht gelesen werden: ' + err.message); }
 });
 
 function baseUrlWithoutQuery(){
