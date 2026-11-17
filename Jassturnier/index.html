@@ -48,6 +48,11 @@
     line-height:1.2;
     margin:0 0 .35rem;
   }
+  .rv-credit{display:none; margin-left:auto; align-items:center; gap:.7rem; background:#fff; border-radius:999px; padding:.35rem 1.2rem .35rem .4rem;}
+  .rv-credit img{height:46px; width:auto; display:block;}
+  .rv-credit-txt{display:flex; flex-direction:column; line-height:1.1;}
+  .rv-credit-txt small{font-size:.9rem; color:#4b5563; font-weight:600;}
+  .rv-credit-txt strong{font-size:1.6rem; font-weight:800; color:#A63D1C; letter-spacing:.01em;}
   header p.sub{
     margin:.1rem 0 0; color:#f5c518; font-size:clamp(.85rem,2.4vw,1.05rem); font-weight:700;
   }
@@ -238,6 +243,8 @@
     body.rv .header-logo img{height:52px;}
     body.rv header h1{margin:0;}
     body.rv .made-by{display:none;}
+    /* Statt Fusszeile (nicht klickbar am Beamer): Webschmiede gut lesbar rechts im Kopf */
+    body.rv .rv-credit{display:flex;}
     body.rv #rangliste-view{max-width:none; padding:0 1.5rem .8rem;}
     body.rv .card{margin-top:.8rem; padding:.9rem 1.2rem;}
     body.rv .card h2{font-size:1.8rem; line-height:1.15;}
@@ -323,6 +330,10 @@
     <div class="header-logo"><img src="supporter-logo.png" alt="Supporter FCEK"></div>
     <div>
       <h1>Supporter-Jassturnier</h1>
+    </div>
+    <div class="rv-credit" aria-label="Turnier-Tool von Webschmiede, webschmiede.ch">
+      <img src="webschmiede-icon.svg" alt="">
+      <div class="rv-credit-txt"><small>Turnier-Tool von</small><strong>webschmiede.ch</strong></div>
     </div>
   </div>
 </header>
