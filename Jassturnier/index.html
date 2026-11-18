@@ -1944,7 +1944,7 @@ function renderTableView(tischNum){
   } else {
     html += '<p class="status-msg" id="tv-save-status" style="margin-top:.6rem; text-align:center; font-size:1rem;"></p>';
     html += '<button class="btn gold" id="tv-final-btn" style="width:100%; margin-top:.6rem; font-size:1.1rem; padding:.9rem;"></button>';
-    html += '<p class="status-msg" style="margin-top:.8rem;">Jede Zahl wird automatisch gespeichert. Wenn alle ' + GAMES_PER_TABLE + ' Spiele eingetragen sind und die Kontrolle grün ist, auf &laquo;Definitiv abgeben&raquo; drücken.</p>';
+    html += '<p class="status-msg" style="margin-top:.8rem;">Jede Zahl wird automatisch gespeichert. Wenn alle ' + GAMES_PER_TABLE + ' Spiele eingetragen sind und die Kontrolle grün ist, auf &laquo;Punkte speichern&raquo; drücken.</p>';
   }
 
   card.innerHTML = html;
@@ -1976,9 +1976,9 @@ function renderTableView(tischNum){
     if(finalBtn){
       const ready = tt2.filled === GAMES_PER_TABLE && !bad2;
       finalBtn.disabled = !ready;
-      finalBtn.textContent = ready ? '✓ Definitiv abgeben'
+      finalBtn.textContent = ready ? '✓ Punkte speichern'
         : bad2 ? 'Kontrolle stimmt nicht – bitte Punkte prüfen'
-        : 'Definitiv abgeben (erst ' + tt2.filled + ' von ' + GAMES_PER_TABLE + ' Spielen)';
+        : 'Punkte speichern (erst ' + tt2.filled + ' von ' + GAMES_PER_TABLE + ' Spielen)';
     }
   }
   function rejectSave(msg){
@@ -2103,7 +2103,7 @@ function renderTableView(tischNum){
     if(!live){ rejectSave(); return; }
     const tt4 = tableTotals(live);
     if(tt4.filled !== GAMES_PER_TABLE || tt4.total !== EXPECTED_TABLE_TOTAL) return;
-    if(!confirm('Punkte von Tisch ' + tischNum + ' definitiv abgeben?\n\nTotal ' + tt4.sum1 + ' : ' + tt4.sum2 + '\n\nDanach kann am Handy nichts mehr geändert werden.')) return;
+    if(!confirm('Punkte von Tisch ' + tischNum + ' definitiv speichern?\n\nTotal ' + tt4.sum1 + ' : ' + tt4.sum2 + '\n\nDanach kann am Handy nichts mehr geändert werden.')) return;
     const go = () => tvSaving ? setTimeout(go, 300) : doSave(true);
     go();
   });
