@@ -596,9 +596,17 @@ onValue(stateRef, (snap) => {
       const remote = incoming.current.rounds && incoming.current.rounds[r] && incoming.current.rounds[r].tables && incoming.current.rounds[r].tables[t];
       const sameTable = local && remote && JSON.stringify([local.team1, local.team2]) === JSON.stringify([remote.team1, remote.team2]);
       // Auf der Tisch-Seite verfallen lokale Eingaben, sobald die Turnierleitung sperrt; im Admin wird ja gerade an gesperrten Tischen gearbeitet.
-      const lockedForMe = remote && remote.locked && getTischParam() !== null;
+      const onPhone = getTischParam() !== null;
+      const lockedForMe = remote && (remote.locked || remote.submitted) && onPhone;
       if(sameTable && !lockedForMe && !!remote.totalMode === !!local.totalMode){
-        remote.games = local.games;
+        if(onPhone){
+          // Handy: nur die eigenen, noch ungespeicherten Spiele behalten, alles andere vom Server (z. B. zweites Handy).
+          const rg = Array.from({ length: GAMES_PER_TABLE }, (_, i) => (remote.games && remote.games[i]) || { score1: null, score2: null });
+          tvDirty.forEach(i => { rg[i] = local.games[i]; });
+          remote.games = rg;
+        } else {
+          remote.games = local.games;
+        }
         remote.totalScore1 = local.totalScore1;
         remote.totalScore2 = local.totalScore2;
       } else {
@@ -634,7 +642,7 @@ onValue(ref(db, '.info/connected'), (snap) => {
 
 // Ohne Verbindung keine Admin-Aktionen: Firebase würde sie zurückhalten und später
 // über das schreiben, was die Tische inzwischen gespeichert haben.
-const ADMIN_WRITE_CONTROLS = '#start-btn, #reset-btn, #delete-current-btn, #reveal-next-btn, #reveal-back-btn, [data-toggle-total], [data-toggle-lock], [data-save-table], [data-finish], [data-redraw], [data-hist-delete], #bk-now-btn, [data-bk-restore], [data-reveal-step]';
+const ADMIN_WRITE_CONTROLS = '#start-btn, #reset-btn, #delete-current-btn, #reveal-next-btn, #reveal-back-btn, [data-toggle-total], [data-toggle-lock], [data-save-table], [data-finish], [data-redraw], [data-hist-delete], #bk-now-btn, [data-bk-restore], [data-reveal-step], [data-release]';
 document.getElementById('admin-content').addEventListener('click', (e) => {
   if(connected || !e.target.closest(ADMIN_WRITE_CONTROLS)) return;
   e.preventDefault();
@@ -671,6 +679,7 @@ function normalizeTournament(tourn){
       if(t.totalScore1 === undefined) t.totalScore1 = null;
       if(t.totalScore2 === undefined) t.totalScore2 = null;
       if(t.locked === undefined) t.locked = false;
+      if(t.submitted === undefined) t.submitted = false;
     });
   });
 }
@@ -836,6 +845,8 @@ function finishRound(roundIdx){
     alert('Runde kann noch nicht abgeschlossen werden – folgende Tische stimmen noch nicht:\n\n' + problems.join('\n'));
     return;
   }
+  const notSubmitted = round.tables.map((t, i) => (!t.submitted && !t.locked && !t.totalMode) ? 'Tisch ' + (i + 1) : null).filter(Boolean);
+  if(notSubmitted.length && !confirm('Noch nicht «definitiv abgegeben»: ' + notSubmitted.join(', ') + '.\n\nDie Punkte sind vollständig und stimmen. Runde trotzdem abschliessen?')) return;
   round.complete = true;
   roundOpen.delete(roundIdx); // abgeschlossene Runde klappt zu, die neue ist offen
   if(round.pause.length > 0){
@@ -1402,7 +1413,7 @@ function renderDashboard(){
   round.tables.forEach((t, tidx) => {
     const st = tableStatus(t);
     const tt = tableTotals(t);
-    const label = st === 'ok' ? '✓ fertig'
+    const label = st === 'ok' ? (t.submitted ? '✓ abgegeben' : (t.locked || t.totalMode) ? '✓ fertig' : '✓ 10/10, noch nicht abgegeben')
       : st === 'bad' ? '⚠ ' + tt.total.toLocaleString('de-CH') + ' statt ' + EXPECTED_TABLE_TOTAL.toLocaleString('de-CH')
       : st === 'partial' ? tt.filled + ' von ' + GAMES_PER_TABLE + ' Spielen'
       : 'noch nichts';
@@ -1493,6 +1504,10 @@ function render(){
           (t.locked ? '🔓 Für Spieler entsperren' : '🔒 Für Spieler sperren & selbst eintragen') +
         '</button>' +
       '</div>';
+      if(t.submitted){
+        html += '<div class="check-note check-ok" style="display:flex; align-items:center; justify-content:space-between; gap:.6rem; flex-wrap:wrap;"><span>✓ Vom Tisch definitiv abgegeben.</span>' +
+          (round.complete ? '' : '<button type="button" class="btn ghost" style="font-size:.75rem; padding:.3rem .6rem;" data-release="' + ridx + '-' + tidx + '">Für Tisch wieder freigeben</button>') + '</div>';
+      }
       if(t.locked){
         html += '<div class="check-note" style="background:#eaf1fb;color:var(--navy);border:1px solid #cfe0f5;">Gesperrt &ndash; die Turnierleitung trägt die Punkte für diesen Tisch ein. Spieler können in ihrer Ansicht nichts mehr ändern.</div>';
       } else {
@@ -1586,6 +1601,15 @@ function render(){
       table.totalMode = goingToTotal;
       unsavedTableKeys.delete(r + '-' + t);
       update(tableRef(r, t), tablePatch(table));
+      render();
+    });
+  });
+  roundsContainer.querySelectorAll('[data-release]').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const [r, t] = this.dataset.release.split('-').map(Number);
+      if(!confirm('Tisch ' + (t+1) + ' wieder freigeben? Die Spieler können ihre Punkte dann am Handy wieder ändern und nochmals abgeben.')) return;
+      state.current.rounds[r].tables[t].submitted = false;
+      update(tableRef(r, t), { submitted: null });
       render();
     });
   });
@@ -1689,7 +1713,7 @@ function backupHtml(entry){
     h += '<h2>Runde ' + (ridx + 1) + (round.complete ? ' (abgeschlossen)' : ' (läuft)') + '</h2><div class="tische">';
     round.tables.forEach((t, tidx) => {
       const tt = tableTotals(t);
-      h += '<div class="tisch"><b>Tisch ' + (tidx + 1) + '</b>' + (t.locked ? ' (gesperrt)' : '') + '<table><tr><th class="l">Spiel</th><th class="l">' + esc(t.team1.join(' & ')) + '</th><th class="l">' + esc(t.team2.join(' & ')) + '</th></tr>';
+      h += '<div class="tisch"><b>Tisch ' + (tidx + 1) + '</b>' + (t.locked ? ' (gesperrt)' : '') + (t.submitted ? ' (abgegeben)' : '') + '<table><tr><th class="l">Spiel</th><th class="l">' + esc(t.team1.join(' & ')) + '</th><th class="l">' + esc(t.team2.join(' & ')) + '</th></tr>';
       if(t.totalMode){ h += '<tr><td class="l">Gesamt</td><td>' + v(t.totalScore1) + '</td><td>' + v(t.totalScore2) + '</td></tr>'; }
       else t.games.forEach((g, gi) => { h += '<tr><td class="l">' + (gi + 1) + '</td><td>' + v(g.score1) + '</td><td>' + v(g.score2) + '</td></tr>'; });
       const bad = tt.filled === GAMES_PER_TABLE && tt.total !== EXPECTED_TABLE_TOTAL;
@@ -1804,9 +1828,20 @@ function findActiveTableRound(tischNum){
 
 // Statusmeldung der Tisch-Seite: liegt ausserhalb des DOM, damit sie das Neuzeichnen übersteht.
 let tvStatus = { key: null, text: '', color: '' };
+const TV_OFFLINE_MSG = 'Noch nicht gespeichert: keine Verbindung. Die Punkte bleiben auf dem Handy und werden automatisch gespeichert, sobald das Netz zurück ist.';
+let tvPendingTimer = null;
 function setTvStatus(key, text, color){
+  // Ohne Verbindung nie «wird gespeichert» anzeigen, sondern klar sagen, dass noch nichts in der DB ist.
+  if(color === 'var(--muted)' && !connected){ text = TV_OFFLINE_MSG; color = 'var(--red)'; }
   tvStatus = { key, text, color };
   applyTvStatus(key);
+  clearTimeout(tvPendingTimer);
+  if(color === 'var(--muted)'){
+    // Hängt das Speichern länger (schlechtes Netz), ebenfalls deutlich warnen.
+    tvPendingTimer = setTimeout(() => {
+      if(tvStatus.key === key && tvStatus.color === 'var(--muted)') setTvStatus(key, TV_OFFLINE_MSG, 'var(--red)');
+    }, 5000);
+  }
 }
 function applyTvStatus(key){
   const el = document.getElementById('tv-save-status');
@@ -1831,7 +1866,10 @@ function tvClearDraft(tischNum){
   try{ localStorage.removeItem(tvDraftKey(tischNum)); }catch(e){}
 }
 
-let tvEditCount = 0; // erkennt Eingaben, die während eines laufenden Speicherns dazukommen
+// Automatisches Speichern: jedes geänderte Spiel wird kurz nach der Eingabe einzeln in die DB geschrieben.
+const tvDirty = new Set();   // Spiel-Indizes mit lokalen, noch nicht gespeicherten Änderungen
+let tvSaveTimer = null, tvSaving = false, tvSaveAgain = false;
+const TV_SAVE_DELAY = 700;   // ms Tipp-Pause, bevor gespeichert wird
 
 function renderTableView(tischNum){
   const card = document.getElementById('tv-card');
@@ -1850,16 +1888,23 @@ function renderTableView(tischNum){
   }
   const { round, ridx } = found;
   const t = round.tables[tischNum - 1];
-  const locked = !!t.locked;
+  const submitted = !!t.submitted;
+  const locked = !!t.locked || submitted;
   const tvKey = ridx + '-' + (tischNum - 1);
 
   const draft = tvReadDraft(tischNum, t, ridx);
+  let restoredDraft = false;
   if(locked || t.totalMode){
     tvClearDraft(tischNum);
+    tvDirty.clear();
   } else if(draft && !unsavedTableKeys.has(tvKey)){
-    t.games = draft;
-    unsavedTableKeys.add(tvKey);
-    setTvStatus(tvKey, 'Noch nicht gespeichert', 'var(--red)');
+    // Entwurf (z. B. offline eingetippt, dann Browser zu): nur die abweichenden Spiele übernehmen und nachspeichern.
+    for(let i = 0; i < GAMES_PER_TABLE; i++){
+      const d = draft[i] || { score1: null, score2: null };
+      if(JSON.stringify(d) !== JSON.stringify(t.games[i])){ t.games[i] = d; tvDirty.add(i); }
+    }
+    if(tvDirty.size){ unsavedTableKeys.add(tvKey); restoredDraft = true; setTvStatus(tvKey, 'Noch nicht gespeichert – wird gespeichert …', 'var(--red)'); }
+    else tvClearDraft(tischNum);
   }
 
   const tt = tableTotals(t);
@@ -1870,7 +1915,9 @@ function renderTableView(tischNum){
   html += '<div class="tv-round">Runde ' + (ridx+1) + ' von ' + ROUNDS_TOTAL + '</div>';
   html += '<div class="tv-teams"><div class="tv-team-name">' + teamNames(t.team1) + '</div><div class="tv-team-name">' + teamNames(t.team2) + '</div></div>';
 
-  if(locked){
+  if(submitted){
+    html += '<div class="check-note check-ok">✓ Definitiv abgegeben. Vielen Dank! Änderungen sind nur noch über die Turnierleitung möglich.</div>';
+  } else if(locked){
     html += '<div class="check-note" style="background:#eaf1fb;color:var(--navy);border:1px solid #cfe0f5;">Die Turnierleitung trägt die Punkte für diesen Tisch ein. Hier nur noch zur Ansicht.</div>';
   }
 
@@ -1890,12 +1937,14 @@ function renderTableView(tischNum){
   }
 
   html += '<div class="tv-totals" id="tv-totals">' + totalsRowHtml(tt, isBad, unsavedTableKeys.has(tvKey)) + '</div>';
-  if(locked){
+  if(submitted){
+    // nichts mehr zu tun
+  } else if(locked){
     html += '<p class="status-msg" style="margin-top:.8rem; text-align:center;">Gesperrt durch die Turnierleitung.</p>';
   } else {
-    html += '<button class="btn gold" id="tv-save-btn" style="width:100%; margin-top:1rem; font-size:1.1rem; padding:.9rem;">Punkte speichern</button>';
     html += '<p class="status-msg" id="tv-save-status" style="margin-top:.6rem; text-align:center; font-size:1rem;"></p>';
-    html += '<p class="status-msg" style="margin-top:.8rem;">Alle ' + GAMES_PER_TABLE + ' Spiele eintragen, dann auf &laquo;Punkte speichern&raquo; drücken. Sobald die Kontrolle grün ist, der Turnierleitung Bescheid geben &ndash; sie schliesst die Runde ab.</p>';
+    html += '<button class="btn gold" id="tv-final-btn" style="width:100%; margin-top:.6rem; font-size:1.1rem; padding:.9rem;"></button>';
+    html += '<p class="status-msg" style="margin-top:.8rem;">Jede Zahl wird automatisch gespeichert. Wenn alle ' + GAMES_PER_TABLE + ' Spiele eingetragen sind und die Kontrolle grün ist, auf &laquo;Definitiv abgeben&raquo; drücken.</p>';
   }
 
   card.innerHTML = html;
@@ -1903,6 +1952,8 @@ function renderTableView(tischNum){
 
   if(locked){
     unsavedTableKeys.delete(tvKey);
+    tvDirty.clear();
+    clearTimeout(tvSaveTimer);
     tvStatus = { key: null, text: '', color: '' };
     return;
   }
@@ -1914,26 +1965,118 @@ function renderTableView(tischNum){
     const liveRound = state.current.rounds[ridx];
     const live = liveRound && liveRound.tables[tischNum - 1];
     const sameTable = live && JSON.stringify([live.team1, live.team2]) === teams;
-    return (!sameTable || live.locked || live.totalMode || liveRound.complete) ? null : live;
+    return (!sameTable || live.locked || live.submitted || live.totalMode || liveRound.complete) ? null : live;
   }
+  const finalBtn = document.getElementById('tv-final-btn');
   function showTotals(live){
     const tt2 = tableTotals(live);
     const bad2 = tt2.filled === GAMES_PER_TABLE && tt2.total !== EXPECTED_TABLE_TOTAL;
     const slot = document.getElementById('tv-totals');
     if(slot) slot.innerHTML = totalsRowHtml(tt2, bad2, unsavedTableKeys.has(tvKey));
+    if(finalBtn){
+      const ready = tt2.filled === GAMES_PER_TABLE && !bad2;
+      finalBtn.disabled = !ready;
+      finalBtn.textContent = ready ? '✓ Definitiv abgeben'
+        : bad2 ? 'Kontrolle stimmt nicht – bitte Punkte prüfen'
+        : 'Definitiv abgeben (erst ' + tt2.filled + ' von ' + GAMES_PER_TABLE + ' Spielen)';
+    }
   }
-  function rejectSave(){
+  function rejectSave(msg){
+    clearTimeout(tvSaveTimer);
+    tvDirty.clear();
     unsavedTableKeys.delete(tvKey);
     tvClearDraft(tischNum);
-    setTvStatus(tvKey, 'Nicht gespeichert: Der Tisch wurde inzwischen von der Turnierleitung gesperrt oder geändert.', 'var(--red)');
+    setTvStatus(tvKey, msg || 'Nicht gespeichert: Der Tisch wurde inzwischen von der Turnierleitung gesperrt, abgegeben oder geändert.', 'var(--red)');
     setTimeout(boot, 2500);
+  }
+  function scheduleSave(delay){
+    clearTimeout(tvSaveTimer);
+    tvSaveTimer = setTimeout(() => doSave(false), delay);
+  }
+
+  // Schreibt nur die geänderten Spiele dieses Handys (zwei Handys am selben Tisch überschreiben sich nicht).
+  // Der Server prüft dabei, ob der Tisch noch offen ist: ein Handy, das erst später wieder Netz hat,
+  // kann so keine gesperrte, abgegebene oder abgeschlossene Runde mehr überschreiben.
+  function doSave(final){
+    clearTimeout(tvSaveTimer);
+    const live = liveTable();
+    if(!live){ rejectSave(); return; }
+    if(tvSaving){ tvSaveAgain = true; return; }
+    if(!final && tvDirty.size === 0) return;
+    tvSaving = true;
+    const dirty = [...tvDirty];
+    const vals = dirty.map(i => ({ score1: live.games[i].score1, score2: live.games[i].score2 }));
+    let finalInvalid = false;
+    setTvStatus(tvKey, final ? 'Gebe ab …' : 'Speichere …', 'var(--muted)');
+    const slowHint = setTimeout(() => {
+      if(tvStatus.key === tvKey && (tvStatus.text === 'Speichere …' || tvStatus.text === 'Gebe ab …')){
+        setTvStatus(tvKey, 'Noch nicht gespeichert: keine Verbindung. Sobald das Netz zurück ist, wird automatisch gespeichert.', 'var(--red)');
+      }
+    }, 5000);
+    runTransaction(ref(db, 'jassturnier/state/current/rounds/' + ridx), (cur) => {
+      if(cur === null) return cur; // lokal noch nichts bekannt: Firebase ruft mit dem Serverstand erneut auf
+      const table = cur.tables && cur.tables[tischNum - 1];
+      if(!table || cur.complete || table.locked || table.submitted || table.totalMode) return;
+      if(JSON.stringify([table.team1, table.team2]) !== teams) return;
+      const games = Array.from({ length: GAMES_PER_TABLE }, (_, i) => {
+        const g = (table.games && table.games[i]) || {};
+        return { score1: g.score1 === undefined ? null : g.score1, score2: g.score2 === undefined ? null : g.score2 };
+      });
+      dirty.forEach((gi, k) => { games[gi] = vals[k]; });
+      table.games = games;
+      if(final){
+        const tt3 = tableTotals({ games, totalMode: false });
+        if(tt3.filled !== GAMES_PER_TABLE || tt3.total !== EXPECTED_TABLE_TOTAL){ finalInvalid = true; return; }
+        finalInvalid = false;
+        table.submitted = true;
+      }
+      return cur;
+    }, { applyLocally: false })
+      .then((result) => {
+        clearTimeout(slowHint);
+        tvSaving = false;
+        if(!result.committed || !result.snapshot.exists()){
+          if(finalInvalid){ setTvStatus(tvKey, 'Noch nicht abgegeben: Die Kontrolle stimmt nicht (nicht alle Spiele oder nicht ' + EXPECTED_TABLE_TOTAL + ' Punkte).', 'var(--red)'); return; }
+          rejectSave(); return;
+        }
+        // Gespeicherte Spiele sind sauber, ausser sie wurden während des Speicherns schon wieder geändert.
+        const now = liveTable() || live;
+        dirty.forEach((gi, k) => {
+          const g = now.games[gi];
+          if(g && g.score1 === vals[k].score1 && g.score2 === vals[k].score2) tvDirty.delete(gi);
+        });
+        if(final){
+          tvDirty.clear(); unsavedTableKeys.delete(tvKey); tvClearDraft(tischNum);
+          setTvStatus(tvKey, 'Definitiv abgegeben ✓', 'var(--green)');
+          if(card.contains(document.activeElement)) document.activeElement.blur();
+          pendingRender = false; boot();
+          return;
+        }
+        if(tvDirty.size === 0){
+          unsavedTableKeys.delete(tvKey);
+          tvClearDraft(tischNum);
+          setTvStatus(tvKey, 'Gespeichert ✓', 'var(--green)');
+        } else {
+          scheduleSave(tvSaveAgain ? 0 : TV_SAVE_DELAY);
+        }
+        tvSaveAgain = false;
+        const current = liveTable();
+        if(current) showTotals(current);
+      })
+      .catch(err => {
+        clearTimeout(slowHint);
+        tvSaving = false;
+        setTvStatus(tvKey, 'Speichern fehlgeschlagen: ' + err.message + ' – wird nochmals versucht.', 'var(--red)');
+        scheduleSave(3000);
+      });
   }
 
   card.querySelectorAll('input[type=number]').forEach(inp => {
     inp.addEventListener('input', function(){
       const live = liveTable();
       if(!live){
-        // Tisch inzwischen gesperrt, neu ausgelost oder Runde abgeschlossen: aktuellen Stand zeigen.
+        // Tisch inzwischen gesperrt, abgegeben, neu ausgelost oder Runde abgeschlossen: aktuellen Stand zeigen.
+        tvDirty.clear();
         unsavedTableKeys.delete(tvKey);
         tvClearDraft(tischNum);
         this.blur();
@@ -1941,53 +2084,31 @@ function renderTableView(tischNum){
         boot();
         return;
       }
-      handleGamePairInput(this, live.games[Number(this.dataset.game)], '.tv-game-row');
-      tvEditCount++;
+      const gi = Number(this.dataset.game);
+      handleGamePairInput(this, live.games[gi], '.tv-game-row');
+      tvDirty.add(gi);
       tvWriteDraft(tischNum, live, ridx);
       unsavedTableKeys.add(tvKey);
       showTotals(live);
-      setTvStatus(tvKey, 'Noch nicht gespeichert', 'var(--red)');
+      setTvStatus(tvKey, 'Wird gespeichert …', 'var(--muted)');
+      scheduleSave(TV_SAVE_DELAY);
     });
+    // Feld verlassen (nächstes Feld, Tastatur zu): sofort speichern.
+    inp.addEventListener('change', () => { if(tvDirty.size) scheduleSave(0); });
   });
 
-  document.getElementById('tv-save-btn').addEventListener('click', function(){
+  showTotals(liveTable() || t);
+  finalBtn.addEventListener('click', function(){
     const live = liveTable();
     if(!live){ rejectSave(); return; }
-    setTvStatus(tvKey, 'Speichere …', 'var(--muted)');
-    const games = live.games;
-    const editsAtSave = tvEditCount;
-    const slowHint = setTimeout(() => {
-      if(tvStatus.key === tvKey && tvStatus.text === 'Speichere …'){
-        setTvStatus(tvKey, 'Noch nicht gespeichert: keine Verbindung. Sobald das Netz zurück ist, wird automatisch gespeichert.', 'var(--red)');
-      }
-    }, 5000);
-    // Der Server prüft beim Speichern, ob der Tisch noch offen ist. Ein Handy, das erst später wieder
-    // Netz hat, kann so keine gesperrte Runde mehr überschreiben. Schreibt nur die eigenen Spiele.
-    runTransaction(ref(db, 'jassturnier/state/current/rounds/' + ridx), (cur) => {
-      if(cur === null) return cur; // lokal noch nichts bekannt: Firebase ruft mit dem Serverstand erneut auf
-      const table = cur.tables && cur.tables[tischNum - 1];
-      if(!table || cur.complete || table.locked || table.totalMode) return;
-      if(JSON.stringify([table.team1, table.team2]) !== teams) return;
-      table.games = games;
-      return cur;
-    }, { applyLocally: false })
-      .then((result) => {
-        clearTimeout(slowHint);
-        if(!result.committed || !result.snapshot.exists()){ rejectSave(); return; }
-        if(tvEditCount !== editsAtSave){ return; } // neuere Eingaben bleiben als ungespeichert markiert
-        unsavedTableKeys.delete(tvKey);
-        tvClearDraft(tischNum);
-        setTvStatus(tvKey, 'Gespeichert ✓', 'var(--green)');
-        const current = liveTable();
-        if(current) showTotals(current);
-        // Fokus raus, sonst bleibt die Seite auf dem iPhone bei offener Tastatur auf der alten Runde stehen.
-        if(card.contains(document.activeElement)) document.activeElement.blur();
-      })
-      .catch(err => {
-        clearTimeout(slowHint);
-        setTvStatus(tvKey, 'Speichern fehlgeschlagen: ' + err.message + ' – bitte nochmals versuchen.', 'var(--red)');
-      });
+    const tt4 = tableTotals(live);
+    if(tt4.filled !== GAMES_PER_TABLE || tt4.total !== EXPECTED_TABLE_TOTAL) return;
+    if(!confirm('Punkte von Tisch ' + tischNum + ' definitiv abgeben?\n\nTotal ' + tt4.sum1 + ' : ' + tt4.sum2 + '\n\nDanach kann am Handy nichts mehr geändert werden.')) return;
+    const go = () => tvSaving ? setTimeout(go, 300) : doSave(true);
+    go();
   });
+
+  if(restoredDraft || tvDirty.size) scheduleSave(300);
 }
 
 // Paarungen der laufenden Runde für die Live-Rangliste (Beamer): wer sitzt an welchem Tisch.
