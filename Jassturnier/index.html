@@ -773,6 +773,7 @@ function drawRound(playerNames){
   return { tables, pause: rest, complete: false, pauseAvg: null };
 }
 
+let draftPlayersDirty = false, draftPlayersTimer = null;
 function startTournament(){
   const raw = document.getElementById('players-input').value;
   const names = raw.split('\n').map(s=>s.trim()).filter(Boolean);
@@ -781,6 +782,9 @@ function startTournament(){
   state.current.players = unique;
   state.current.rounds = [drawRound(unique)];
   set(ref(db, CURRENT_PATH), state.current);
+  clearTimeout(draftPlayersTimer); draftPlayersDirty = false;
+  state.draftPlayers = null;
+  set(ref(db, 'jassturnier/state/draftPlayers'), null); // Entwurf erledigt
   render();
 }
 
@@ -1453,9 +1457,19 @@ function render(){
   const rounds = state.current.rounds;
   const players = state.current.players;
 
-  playersInput.oninput = function(){
-    const names = this.value.split('\n').map(s=>s.trim()).filter(Boolean);
+  function updatePlayerCount(){
+    const names = playersInput.value.split('\n').map(s=>s.trim()).filter(Boolean);
     countEl.textContent = names.length + ' Spieler erfasst' + (names.length % 4 !== 0 && names.length > 0 ? ' (Rest ' + (names.length % 4) + ' pausiert pro Runde)' : '');
+  }
+  // Spielerliste als Entwurf in der DB speichern: steht beim nächsten Öffnen (auch auf einem anderen Gerät) wieder da.
+  playersInput.oninput = function(){
+    updatePlayerCount();
+    draftPlayersDirty = true;
+    clearTimeout(draftPlayersTimer);
+    draftPlayersTimer = setTimeout(() => {
+      const v = playersInput.value.trim() ? playersInput.value : null;
+      set(ref(db, 'jassturnier/state/draftPlayers'), v).then(() => { draftPlayersDirty = false; });
+    }, 800);
   };
   startBtn.onclick = startTournament;
   resetBtn.onclick = resetTournament;
@@ -1475,7 +1489,10 @@ function render(){
     startBtn.classList.remove('hidden');
     resetBtn.classList.add('hidden');
     deleteCurrentBtn.classList.add('hidden');
-    countEl.textContent = players.length ? players.length + ' Spieler erfasst' : '0 Spieler erfasst';
+    if(!draftPlayersDirty && document.activeElement !== playersInput && typeof state.draftPlayers === 'string' && playersInput.value !== state.draftPlayers){
+      playersInput.value = state.draftPlayers;
+    }
+    updatePlayerCount();
   }
 
   roundsContainer.innerHTML = '';
